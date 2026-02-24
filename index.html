@@ -157,7 +157,7 @@
             transform: translateY(100%);
             transition: transform 0.3s ease-in;
         }
-        /* sidebar styles - make sticky */
+        /* sidebar styles */
         .sidebar {
             width: 4rem;
             background-color: white;
@@ -392,7 +392,7 @@
             return tx.complete;
         };
 
-        // GAS CODE TEMPLATE (same as before, shortened for brevity - but keep as in original)
+        // Updated GAS CODE TEMPLATE with departmentBulkSave and corrected default order
         const GAS_CODE_TEMPLATE = `function doPost(e) {
   var prop = ContentService.MimeType.JSON;
   try {
@@ -610,6 +610,37 @@
         }
         backupDeptSheet.appendRow([new Date(), 'delete', item.id || '', item.name || '', item.icon || '', item.order || '']);
       }
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+
+    // New bulk save for departments
+    if (action === 'departmentBulkSave') {
+      var deptSheet = ss.getSheetByName('Departments');
+      if (!deptSheet) {
+        deptSheet = ss.insertSheet('Departments');
+        deptSheet.appendRow(['id', 'name', 'icon', 'order']);
+      }
+      // Clear all data except header
+      var lastRow = deptSheet.getLastRow();
+      if (lastRow > 1) {
+        deptSheet.deleteRows(2, lastRow - 1);
+      }
+      
+      var departments = data.departments || [];
+      departments.forEach(function(dept) {
+        deptSheet.appendRow([dept.id || '', dept.name || '', dept.icon || '', dept.order || '']);
+      });
+      
+      // Backup each as bulkSave
+      var backupDeptSheet = ss.getSheetByName('Departments_backup');
+      if (!backupDeptSheet) {
+        backupDeptSheet = ss.insertSheet('Departments_backup');
+        backupDeptSheet.appendRow(['timestamp', 'action', 'id', 'name', 'icon', 'order']);
+      }
+      departments.forEach(function(dept) {
+        backupDeptSheet.appendRow([new Date(), 'bulkSave', dept.id || '', dept.name || '', dept.icon || '', dept.order || '']);
+      });
+      
       return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
     }
 
@@ -852,13 +883,13 @@ function doGet(e) {
             { id: '1', name: 'สำนักงานใหญ่', icon: 'building', order: 0 }
         ];
 
-        // Default categories
+        // Default categories with requested order: ทั่วไป (X), ของออกบูธ (B), อุปกรณ์คอมฯ (IT), สื่อคณิตศาสตร์ (M), สื่อวิทยาศาสตร์ (S)
         const DEFAULT_CATEGORIES = [
-            { id: '1', name: 'สื่อคณิตศาสตร์', prefix: 'M', order: 0 },
-            { id: '2', name: 'สื่อวิทยาศาสตร์', prefix: 'S', order: 1 },
+            { id: '1', name: 'ทั่วไป', prefix: 'X', order: 0 },
+            { id: '2', name: 'ของออกบูธ', prefix: 'B', order: 1 },
             { id: '3', name: 'อุปกรณ์คอมพิวเตอร์-ไอที', prefix: 'IT', order: 2 },
-            { id: '4', name: 'ของออกบูธ', prefix: 'B', order: 3 },
-            { id: '5', name: 'ทั่วไป', prefix: 'X', order: 4 }
+            { id: '4', name: 'สื่อคณิตศาสตร์', prefix: 'M', order: 3 },
+            { id: '5', name: 'สื่อวิทยาศาสตร์', prefix: 'S', order: 4 }
         ];
 
         const DEFAULT_LOCATIONS = [
@@ -961,7 +992,7 @@ function doGet(e) {
             const [selectedBorrowedIds, setSelectedBorrowedIds] = useState(new Set());
 
             const [formData, setFormData] = useState({
-                id: '', code: '', name: '', category: 'สื่อคณิตศาสตร์', 
+                id: '', code: '', name: '', category: 'ทั่วไป', // changed default to 'ทั่วไป'
                 price: '', location: '', date: new Date().toISOString().split('T')[0], 
                 status: 'ใช้งานได้',
                 barcode: '',
@@ -1187,11 +1218,10 @@ function doGet(e) {
                 }
             };
 
-            useEffect(() => {
-                if (scriptUrl) {
-                    saveConfigToSheet();
-                }
-            }, [categories, locations, statuses]);
+            // Remove auto-save for dropdown to avoid multiple saves; we'll save manually on close
+            // But we keep the effect for initial load only? Actually we want to save only when user clicks save.
+            // So we remove the useEffect that calls saveConfigToSheet on changes.
+            // Instead we'll call it in the save button.
 
             // Filter assets by selected department (all means no filter)
             const filteredAssetsByDept = useMemo(() => {
@@ -1309,7 +1339,7 @@ function doGet(e) {
                 } else {
                     const today = new Date().toISOString().split('T')[0];
                     setFormData({ 
-                        id: '', code: '', name: '', category: categories[0]?.name || 'สื่อคณิตศาสตร์', 
+                        id: '', code: '', name: '', category: categories[0]?.name || 'ทั่วไป', 
                         price: '', location: '', date: today, 
                         status: statuses[0]?.name || 'ใช้งานได้',
                         barcode: '',
@@ -1562,18 +1592,10 @@ function doGet(e) {
                     id: Date.now().toString(),
                     name,
                     icon: icon || 'folder',
-                    order: departments.length
+                    order: departments.filter(d => d.id !== 'all').length
                 };
                 setDepartments([...departments, newDept]);
-                if (!isOnline) {
-                    addPending(newDept, 'departmentCreate');
-                } else {
-                    fetch(scriptUrl, {
-                        method: 'POST', mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'departmentCreate', data: newDept })
-                    }).catch(() => addPending(newDept, 'departmentCreate'));
-                }
+                // Not saving immediately, will be saved on bulk save
             };
 
             const updateDepartment = (id, field, value) => {
@@ -1583,14 +1605,28 @@ function doGet(e) {
             const deleteDepartment = (id) => {
                 if (id === 'all') return;
                 setDepartments(prev => prev.filter(d => d.id !== id));
+                // Not saving immediately, will be saved on bulk save
+            };
+
+            // Bulk save departments
+            const saveDepartments = async () => {
+                if (!scriptUrl) { setIsSettingsOpen(true); return; }
+                const deptsToSave = departments.filter(d => d.id !== 'all').map((d, index) => ({ ...d, order: index })); // reorder
+                setDepartments(prev => [...prev.filter(d => d.id === 'all'), ...deptsToSave]);
                 if (!isOnline) {
-                    addPending({ id }, 'departmentDelete');
+                    await addPending({ departments: deptsToSave }, 'departmentBulkSave');
+                    setPendingCount(prev => prev + 1);
                 } else {
-                    fetch(scriptUrl, {
-                        method: 'POST', mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'departmentDelete', data: { id } })
-                    }).catch(() => addPending({ id }, 'departmentDelete'));
+                    try {
+                        await fetch(scriptUrl, {
+                            method: 'POST', mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'departmentBulkSave', data: { departments: deptsToSave } })
+                        });
+                    } catch (e) {
+                        await addPending({ departments: deptsToSave }, 'departmentBulkSave');
+                        setPendingCount(prev => prev + 1);
+                    }
                 }
             };
 
@@ -2636,7 +2672,7 @@ function doGet(e) {
                     )
                 ),
 
-                // Department editor slide-over with link to lucide.dev
+                // Department editor slide-over with link to lucide.dev and Save & Close button
                 h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isDepartmentEditorOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
                     h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isDepartmentEditorOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsDepartmentEditorOpen(false) }),
                     h('div', { className: `absolute inset-y-0 left-0 max-w-full flex transition-transform duration-300 ${isDepartmentEditorOpen ? 'translate-x-0' : '-translate-x-full'}` },
@@ -2683,7 +2719,109 @@ function doGet(e) {
                                 )
                             ),
                             h('div', { className: "p-4 border-t" },
-                                h('button', { onClick: () => setIsDepartmentEditorOpen(false), className: "w-full bg-slate-200 py-2 rounded-lg font-bold" }, "ปิด")
+                                h('button', { 
+                                    onClick: async () => {
+                                        await saveDepartments();
+                                        setIsDepartmentEditorOpen(false);
+                                    }, 
+                                    className: "w-full bg-indigo-600 text-white py-2 rounded-lg font-bold" 
+                                }, "บันทึกและปิด")
+                            )
+                        )
+                    )
+                ),
+
+                // Original Config Editor with Save & Close button
+                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isConfigOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isConfigOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsConfigOpen(false) }),
+                    h('div', { className: `absolute inset-y-0 left-0 max-w-full flex transition-transform duration-300 ${isConfigOpen ? 'translate-x-0' : '-translate-x-full'}` },
+                        h('div', { className: "w-screen max-w-sm bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, "จัดการ Dropdown"),
+                                h('div', { className: "flex gap-2" },
+                                    h('button', { 
+                                        onClick: resetConfig,
+                                        className: "text-indigo-600 hover:text-indigo-800 p-2 rounded-lg hover:bg-indigo-50",
+                                        title: "คืนค่าเริ่มต้น"
+                                    }, h(Icon, { name: "rotate-ccw", className: "w-5 h-5" })),
+                                    h('button', { 
+                                        onClick: importFromBackup,
+                                        className: "text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50",
+                                        title: "นำเข้าข้อมูลจาก Backup"
+                                    }, h(Icon, { name: "download", className: "w-5 h-5" })),
+                                    h('button', { 
+                                        onClick: () => setIsConfigOpen(false), 
+                                        className: "p-2 hover:bg-slate-50 rounded-full" 
+                                    }, h(Icon, { name: "x", className: "w-5 h-5" }))
+                                )
+                            ),
+                            h('div', { className: "flex gap-2 p-4 border-b" },
+                                h('button', { 
+                                    onClick: () => setConfigType('categories'),
+                                    className: `tab-button ${configType === 'categories' ? 'active' : ''}`
+                                }, "หมวดหมู่"),
+                                h('button', { 
+                                    onClick: () => setConfigType('locations'),
+                                    className: `tab-button ${configType === 'locations' ? 'active' : ''}`
+                                }, "สถานที่"),
+                                h('button', { 
+                                    onClick: () => setConfigType('statuses'),
+                                    className: `tab-button ${configType === 'statuses' ? 'active' : ''}`
+                                }, "สถานะ")
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-4 custom-scroll" },
+                                (configType === 'categories' ? categories : configType === 'locations' ? locations : statuses)
+                                    .sort((a,b) => a.order - b.order)
+                                    .map(item => {
+                                        const isDragging = draggedItemId === item.id;
+                                        return h('div', { 
+                                            key: item.id, 
+                                            className: `flex items-center gap-2 mb-2 p-2 rounded-lg transition-colors ${isDragging ? 'bg-blue-100 dragging' : 'bg-slate-50'}`,
+                                            draggable: true,
+                                            onDragStart: (e) => handleDragStart(e, item.id),
+                                            onDragOver: handleDragOver,
+                                            onDrop: (e) => handleDrop(e, item.id, configType),
+                                            onDragEnd: handleDragEnd
+                                        },
+                                            h('div', { className: "drag-handle text-slate-400 hover:text-indigo-600 cursor-grab" }, h(Icon, { name: "grip-vertical", className: "w-4 h-4" })),
+                                            h('button', { onClick: () => moveConfigItem(configType, item.id, 'up'), className: "text-slate-400 hover:text-indigo-600" }, h(Icon, { name: "chevron-up", className: "w-4 h-4" })),
+                                            h('button', { onClick: () => moveConfigItem(configType, item.id, 'down'), className: "text-slate-400 hover:text-indigo-600" }, h(Icon, { name: "chevron-down", className: "w-4 h-4" })),
+                                            configType === 'categories' && h('input', { 
+                                                className: "w-16 p-1 border rounded text-sm", 
+                                                placeholder: "Prefix",
+                                                value: item.prefix || 'X',
+                                                onChange: (e) => updateConfigItem(configType, item.id, 'prefix', e.target.value.toUpperCase())
+                                            }),
+                                            h('input', { 
+                                                className: "flex-1 p-2 border rounded-lg text-sm", 
+                                                value: item.name, 
+                                                onChange: (e) => updateConfigItem(configType, item.id, 'name', e.target.value) 
+                                            }),
+                                            h('button', { onClick: () => deleteConfigItem(configType, item.id), className: "text-red-400 hover:text-red-600" }, h(Icon, { name: "trash-2", className: "w-4 h-4" }))
+                                        );
+                                    }),
+                                h('div', { className: "mt-4 flex gap-2" },
+                                    h('input', { id: "newItemName", className: "flex-1 p-2 border rounded-lg text-sm", placeholder: "เพิ่มรายการ..." }),
+                                    h('button', { 
+                                        onClick: () => {
+                                            const input = document.getElementById('newItemName');
+                                            if (input.value.trim()) {
+                                                addConfigItem(configType, input.value.trim());
+                                                input.value = '';
+                                            }
+                                        }, 
+                                        className: "bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold" 
+                                    }, "เพิ่ม")
+                                )
+                            ),
+                            h('div', { className: "p-4 border-t" },
+                                h('button', { 
+                                    onClick: async () => {
+                                        await saveConfigToSheet();
+                                        setIsConfigOpen(false);
+                                    }, 
+                                    className: "w-full bg-indigo-600 text-white py-2 rounded-lg font-bold" 
+                                }, "บันทึกและปิด")
                             )
                         )
                     )
@@ -2951,98 +3089,6 @@ function doGet(e) {
                 isScanningSearch && h('div', { className: "fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center p-6" },
                     h('div', { className: "w-full max-w-sm rounded-2xl overflow-hidden bg-white relative" }, h('div', { id: "reader" })),
                     h('button', { onClick: () => stopScanner('search'), className: "mt-8 bg-white/20 text-white px-8 py-3 rounded-full font-bold backdrop-blur-md" }, "ยกเลิก")
-                ),
-
-                // Original Config Editor
-                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isConfigOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
-                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isConfigOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsConfigOpen(false) }),
-                    h('div', { className: `absolute inset-y-0 left-0 max-w-full flex transition-transform duration-300 ${isConfigOpen ? 'translate-x-0' : '-translate-x-full'}` },
-                        h('div', { className: "w-screen max-w-sm bg-white shadow-2xl flex flex-col h-full" },
-                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
-                                h('h2', { className: "text-lg font-black text-slate-800" }, "จัดการ Dropdown"),
-                                h('div', { className: "flex gap-2" },
-                                    h('button', { 
-                                        onClick: resetConfig,
-                                        className: "text-indigo-600 hover:text-indigo-800 p-2 rounded-lg hover:bg-indigo-50",
-                                        title: "คืนค่าเริ่มต้น"
-                                    }, h(Icon, { name: "rotate-ccw", className: "w-5 h-5" })),
-                                    h('button', { 
-                                        onClick: importFromBackup,
-                                        className: "text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50",
-                                        title: "นำเข้าข้อมูลจาก Backup"
-                                    }, h(Icon, { name: "download", className: "w-5 h-5" })),
-                                    h('button', { 
-                                        onClick: saveConfigToSheet,
-                                        className: "text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50",
-                                        title: "ส่งออกข้อมูล"
-                                    }, h(Icon, { name: "upload", className: "w-5 h-5" })),
-                                    h('button', { onClick: () => setIsConfigOpen(false), className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5" }))
-                                )
-                            ),
-                            h('div', { className: "flex gap-2 p-4 border-b" },
-                                h('button', { 
-                                    onClick: () => setConfigType('categories'),
-                                    className: `tab-button ${configType === 'categories' ? 'active' : ''}`
-                                }, "หมวดหมู่"),
-                                h('button', { 
-                                    onClick: () => setConfigType('locations'),
-                                    className: `tab-button ${configType === 'locations' ? 'active' : ''}`
-                                }, "สถานที่"),
-                                h('button', { 
-                                    onClick: () => setConfigType('statuses'),
-                                    className: `tab-button ${configType === 'statuses' ? 'active' : ''}`
-                                }, "สถานะ")
-                            ),
-                            h('div', { className: "flex-1 overflow-y-auto p-4 custom-scroll" },
-                                (configType === 'categories' ? categories : configType === 'locations' ? locations : statuses)
-                                    .sort((a,b) => a.order - b.order)
-                                    .map(item => {
-                                        const isDragging = draggedItemId === item.id;
-                                        return h('div', { 
-                                            key: item.id, 
-                                            className: `flex items-center gap-2 mb-2 p-2 rounded-lg transition-colors ${isDragging ? 'bg-blue-100 dragging' : 'bg-slate-50'}`,
-                                            draggable: true,
-                                            onDragStart: (e) => handleDragStart(e, item.id),
-                                            onDragOver: handleDragOver,
-                                            onDrop: (e) => handleDrop(e, item.id, configType),
-                                            onDragEnd: handleDragEnd
-                                        },
-                                            h('div', { className: "drag-handle text-slate-400 hover:text-indigo-600 cursor-grab" }, h(Icon, { name: "grip-vertical", className: "w-4 h-4" })),
-                                            h('button', { onClick: () => moveConfigItem(configType, item.id, 'up'), className: "text-slate-400 hover:text-indigo-600" }, h(Icon, { name: "chevron-up", className: "w-4 h-4" })),
-                                            h('button', { onClick: () => moveConfigItem(configType, item.id, 'down'), className: "text-slate-400 hover:text-indigo-600" }, h(Icon, { name: "chevron-down", className: "w-4 h-4" })),
-                                            configType === 'categories' && h('input', { 
-                                                className: "w-16 p-1 border rounded text-sm", 
-                                                placeholder: "Prefix",
-                                                value: item.prefix || 'X',
-                                                onChange: (e) => updateConfigItem(configType, item.id, 'prefix', e.target.value.toUpperCase())
-                                            }),
-                                            h('input', { 
-                                                className: "flex-1 p-2 border rounded-lg text-sm", 
-                                                value: item.name, 
-                                                onChange: (e) => updateConfigItem(configType, item.id, 'name', e.target.value) 
-                                            }),
-                                            h('button', { onClick: () => deleteConfigItem(configType, item.id), className: "text-red-400 hover:text-red-600" }, h(Icon, { name: "trash-2", className: "w-4 h-4" }))
-                                        );
-                                    }),
-                                h('div', { className: "mt-4 flex gap-2" },
-                                    h('input', { id: "newItemName", className: "flex-1 p-2 border rounded-lg text-sm", placeholder: "เพิ่มรายการ..." }),
-                                    h('button', { 
-                                        onClick: () => {
-                                            const input = document.getElementById('newItemName');
-                                            if (input.value.trim()) {
-                                                addConfigItem(configType, input.value.trim());
-                                                input.value = '';
-                                            }
-                                        }, 
-                                        className: "bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold" 
-                                    }, "เพิ่ม")
-                                )
-                            ),
-                            h('div', { className: "p-4 border-t" },
-                                h('button', { onClick: () => setIsConfigOpen(false), className: "w-full bg-slate-200 py-2 rounded-lg font-bold" }, "ปิด")
-                            )
-                        )
-                    )
                 ),
 
                 // Original Settings
