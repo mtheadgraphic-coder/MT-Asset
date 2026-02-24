@@ -1,0 +1,3150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Math Talent Asset Management</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        * { font-family: 'Kanit', sans-serif; }
+        @media print {
+            .no-print { display: none; }
+            .print-only { display: block; }
+        }
+        .sticky-toolbar {
+            position: sticky;
+            top: 64px;
+            z-index: 40;
+            background-color: #f3f4f6;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        .offline-badge {
+            background-color: #f59e0b;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .drag-handle {
+            cursor: grab;
+            user-select: none;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+        .dragging {
+            opacity: 0.5;
+            background: #e0f2fe;
+        }
+        #reader {
+            width: 100%;
+            height: auto;
+        }
+        .checkbox-hidden .checkbox-col {
+            display: none;
+        }
+        .checkbox-visible .checkbox-col {
+            display: table-cell;
+        }
+        .action-button-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .action-icon-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 9999px;
+            background-color: #f1f5f9;
+            color: #475569;
+            transition: all 0.2s;
+        }
+        .action-icon-button:hover {
+            background-color: #e2e8f0;
+            color: #1e293b;
+        }
+        .action-icon-button.active {
+            background-color: #818cf8;
+            color: white;
+        }
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab-button.active {
+            background-color: #818cf8;
+            color: white;
+        }
+        .location-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            margin-top: 0.25rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 50;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .location-dropdown-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .location-dropdown-item:hover {
+            background-color: #f1f5f9;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 3rem;
+            height: 1.5rem;
+            background-color: #cbd5e1;
+            border-radius: 9999px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .toggle-switch.active {
+            background-color: #818cf8;
+        }
+        .toggle-switch .toggle-knob {
+            position: absolute;
+            top: 0.125rem;
+            left: 0.125rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-switch.active .toggle-knob {
+            transform: translateX(1.5rem);
+        }
+        .slide-up-enter {
+            transform: translateY(100%);
+        }
+        .slide-up-enter-active {
+            transform: translateY(0);
+            transition: transform 0.3s ease-out;
+        }
+        .slide-up-exit {
+            transform: translateY(0);
+        }
+        .slide-up-exit-active {
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in;
+        }
+        /* sidebar styles - make sticky */
+        .sidebar {
+            width: 4rem;
+            background-color: white;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 0;
+            gap: 0.75rem;
+            position: sticky;
+            top: 64px;
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+        }
+        .sidebar-tab {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .sidebar-tab:hover {
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+        .sidebar-tab.active {
+            background-color: #818cf8;
+            color: white;
+        }
+        .sidebar-add {
+            margin-top: auto;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e0e7ff;
+            color: #4f46e5;
+            cursor: pointer;
+        }
+        .sidebar-add:hover {
+            background-color: #c7d2fe;
+        }
+        .profile-initial {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9999px;
+            background-color: #818cf8;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+        /* multi-select style */
+        .multi-select {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.5rem;
+        }
+        .multi-select label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0;
+        }
+        /* z-index layers */
+        .z-borrowed { z-index: 70; }
+        .z-history { z-index: 80; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        const { useState, useEffect, useMemo, createElement: h, useRef } = React;
+
+        const Icon = ({ name, className = "w-5 h-5", ...props }) => {
+            return h('span', {
+                ...props,
+                className: `inline-flex items-center justify-center ${className}`,
+                dangerouslySetInnerHTML: { __html: `<i data-lucide="${name}" style="width:100%; height:100%"></i>` }
+            });
+        };
+
+        const refreshIcons = () => {
+            if (window.lucide) window.lucide.createIcons();
+        };
+
+        const Toggle = ({ checked, onChange }) => {
+            return h('div', {
+                className: `toggle-switch ${checked ? 'active' : ''}`,
+                onClick: () => onChange(!checked)
+            },
+                h('div', { className: 'toggle-knob' })
+            );
+        };
+
+        // ----- Service Worker Registration and IndexedDB Setup -----
+        const swRegistration = (() => {
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'asset-cache-v1';
+                    const urlsToCache = [
+                        '/',
+                        'https://unpkg.com/react@18/umd/react.production.min.js',
+                        'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
+                        'https://cdn.tailwindcss.com',
+                        'https://unpkg.com/lucide@latest',
+                        'https://unpkg.com/html5-qrcode',
+                        'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js',
+                        'https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap'
+                    ];
+
+                    self.addEventListener('install', event => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME)
+                                .then(cache => cache.addAll(urlsToCache))
+                        );
+                    });
+
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request)
+                                .then(response => response || fetch(event.request))
+                        );
+                    });
+
+                    self.addEventListener('activate', event => {
+                        const cacheWhitelist = [CACHE_NAME];
+                        event.waitUntil(
+                            caches.keys().then(keyList =>
+                                Promise.all(keyList.map(key => {
+                                    if (!cacheWhitelist.includes(key)) {
+                                        return caches.delete(key);
+                                    }
+                                }))
+                            )
+                        );
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).then(reg => {
+                    console.log('Service Worker registered');
+                }).catch(err => console.error('SW registration failed', err));
+            }
+        })();
+
+        // IndexedDB helper
+        const openDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('AssetDB', 2);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('assets')) {
+                        db.createObjectStore('assets', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('pending')) {
+                        db.createObjectStore('pending', { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!db.objectStoreNames.contains('departments')) {
+                        db.createObjectStore('departments', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('personnel')) {
+                        db.createObjectStore('personnel', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('borrowings')) {
+                        db.createObjectStore('borrowings', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        };
+
+        const saveToIndexedDB = async (storeName, data) => {
+            const db = await openDB();
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            if (Array.isArray(data)) {
+                data.forEach(item => store.put(item));
+            } else {
+                store.put(data);
+            }
+            return tx.complete;
+        };
+
+        const loadFromIndexedDB = async (storeName) => {
+            const db = await openDB();
+            const tx = db.transaction(storeName, 'readonly');
+            const store = tx.objectStore(storeName);
+            return new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        };
+
+        const addPending = async (data, action) => {
+            const db = await openDB();
+            const tx = db.transaction('pending', 'readwrite');
+            const store = tx.objectStore('pending');
+            store.add({ data, action, timestamp: Date.now() });
+            return tx.complete;
+        };
+
+        const getPending = async () => {
+            const db = await openDB();
+            const tx = db.transaction('pending', 'readonly');
+            const store = tx.objectStore('pending');
+            return new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        };
+
+        const clearPending = async (ids) => {
+            const db = await openDB();
+            const tx = db.transaction('pending', 'readwrite');
+            const store = tx.objectStore('pending');
+            ids.forEach(id => store.delete(id));
+            return tx.complete;
+        };
+
+        // GAS CODE TEMPLATE (same as before, shortened for brevity - but keep as in original)
+        const GAS_CODE_TEMPLATE = `function doPost(e) {
+  var prop = ContentService.MimeType.JSON;
+  try {
+    var contents = JSON.parse(e.postData.contents);
+    var action = contents.action;
+    var data = contents.data;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    if (action === 'create' || action === 'update') {
+      var assetSheet = ss.getSheetByName('Asset');
+      if (!assetSheet) {
+        assetSheet = ss.insertSheet('Asset');
+        var assetHeaders = ['id', 'code', 'name', 'category', 'price', 'location', 'date', 'status', 'barcode', 'hasWarranty', 'warrantyYears', 'warrantyMonths', 'warrantyDays', 'warrantyStart', 'warrantyEnd', 'departmentId'];
+        assetSheet.appendRow(assetHeaders);
+      }
+      
+      var headers = assetSheet.getRange(1, 1, 1, assetSheet.getLastColumn()).getValues()[0];
+      var dataKeys = Object.keys(data);
+      var missingHeaders = dataKeys.filter(function(key) { return headers.indexOf(key) === -1; });
+      if (missingHeaders.length > 0) {
+        var newHeaders = headers.concat(missingHeaders);
+        assetSheet.getRange(1, 1, 1, newHeaders.length).setValues([newHeaders]);
+        headers = newHeaders;
+      }
+      
+      var rowData = headers.map(function(h) {
+        if (h === 'id' && !data.id && action === 'create') {
+          return Utilities.getUuid();
+        }
+        return data[h] || "";
+      });
+      
+      if (action === 'create') {
+        assetSheet.appendRow(rowData);
+      } else if (action === 'update') {
+        var ids = assetSheet.getRange(2, 1, assetSheet.getLastRow() - 1, 1).getValues().flat();
+        var rowIndex = ids.indexOf(data.id) + 2;
+        if (rowIndex > 1) {
+          assetSheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
+        } else {
+          assetSheet.appendRow(rowData);
+        }
+      }
+      
+      var backupAssetSheet = ss.getSheetByName('Asset_backup');
+      if (!backupAssetSheet) {
+        backupAssetSheet = ss.insertSheet('Asset_backup');
+        backupAssetSheet.appendRow([
+          'timestamp', 'action', 'id', 'code', 'name', 'category', 'price', 'location', 'date', 'status',
+          'barcode', 'hasWarranty', 'warrantyYears', 'warrantyMonths', 'warrantyDays', 'warrantyStart', 'warrantyEnd', 'departmentId'
+        ]);
+      }
+      var backupRow = [
+        new Date(),
+        action,
+        data.id || '',
+        data.code || '',
+        data.name || '',
+        data.category || '',
+        data.price || '',
+        data.location || '',
+        data.date || '',
+        data.status || '',
+        data.barcode || '',
+        data.hasWarranty || '',
+        data.warrantyYears || '',
+        data.warrantyMonths || '',
+        data.warrantyDays || '',
+        data.warrantyStart || '',
+        data.warrantyEnd || '',
+        data.departmentId || ''
+      ];
+      backupAssetSheet.appendRow(backupRow);
+      
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+    
+    if (action === 'delete') {
+      var assetSheet = ss.getSheetByName('Asset');
+      if (!assetSheet) return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'Asset sheet not found'})).setMimeType(prop);
+      
+      var ids = assetSheet.getRange(2, 1, assetSheet.getLastRow() - 1, 1).getValues().flat();
+      var rowIndex = ids.indexOf(data.id) + 2;
+      if (rowIndex > 1) {
+        var headers = assetSheet.getRange(1, 1, 1, assetSheet.getLastColumn()).getValues()[0];
+        var rowData = assetSheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
+        var item = {};
+        headers.forEach(function(h, i) { item[h] = rowData[i]; });
+        
+        assetSheet.deleteRow(rowIndex);
+        
+        var backupAssetSheet = ss.getSheetByName('Asset_backup');
+        if (!backupAssetSheet) {
+          backupAssetSheet = ss.insertSheet('Asset_backup');
+          backupAssetSheet.appendRow([
+            'timestamp', 'action', 'id', 'code', 'name', 'category', 'price', 'location', 'date', 'status',
+            'barcode', 'hasWarranty', 'warrantyYears', 'warrantyMonths', 'warrantyDays', 'warrantyStart', 'warrantyEnd', 'departmentId'
+          ]);
+        }
+        var backupRow = [
+          new Date(),
+          'delete',
+          item.id || '',
+          item.code || '',
+          item.name || '',
+          item.category || '',
+          item.price || '',
+          item.location || '',
+          item.date || '',
+          item.status || '',
+          item.barcode || '',
+          item.hasWarranty || '',
+          item.warrantyYears || '',
+          item.warrantyMonths || '',
+          item.warrantyDays || '',
+          item.warrantyStart || '',
+          item.warrantyEnd || '',
+          item.departmentId || ''
+        ];
+        backupAssetSheet.appendRow(backupRow);
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+    
+    if (action === 'saveConfig') {
+      var dropdownSheet = ss.getSheetByName('Dropdown');
+      if (!dropdownSheet) {
+        dropdownSheet = ss.insertSheet('Dropdown');
+        dropdownSheet.appendRow(['type', 'id', 'name', 'prefix', 'order']);
+      }
+      
+      var lastRow = dropdownSheet.getLastRow();
+      if (lastRow > 1) dropdownSheet.deleteRows(2, lastRow - 1);
+      
+      var categories = data.categories || [];
+      categories.forEach(function(cat) {
+        dropdownSheet.appendRow(['category', cat.id || '', cat.name || '', cat.prefix || '', cat.order || '']);
+      });
+      
+      var locations = data.locations || [];
+      locations.forEach(function(loc) {
+        dropdownSheet.appendRow(['location', loc.id || '', loc.name || '', '', loc.order || '']);
+      });
+      
+      var statuses = data.statuses || [];
+      statuses.forEach(function(status) {
+        dropdownSheet.appendRow(['status', status.id || '', status.name || '', '', status.order || '']);
+      });
+      
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+
+    if (action === 'departmentCreate' || action === 'departmentUpdate') {
+      var deptSheet = ss.getSheetByName('Departments');
+      if (!deptSheet) {
+        deptSheet = ss.insertSheet('Departments');
+        deptSheet.appendRow(['id', 'name', 'icon', 'order']);
+      }
+      
+      var headers = deptSheet.getRange(1, 1, 1, deptSheet.getLastColumn()).getValues()[0];
+      var dataKeys = Object.keys(data);
+      var missingHeaders = dataKeys.filter(function(key) { return headers.indexOf(key) === -1; });
+      if (missingHeaders.length > 0) {
+        var newHeaders = headers.concat(missingHeaders);
+        deptSheet.getRange(1, 1, 1, newHeaders.length).setValues([newHeaders]);
+        headers = newHeaders;
+      }
+      
+      var rowData = headers.map(function(h) {
+        if (h === 'id' && !data.id && action === 'departmentCreate') {
+          return Utilities.getUuid();
+        }
+        return data[h] || "";
+      });
+      
+      if (action === 'departmentCreate') {
+        deptSheet.appendRow(rowData);
+      } else {
+        var ids = deptSheet.getRange(2, 1, deptSheet.getLastRow() - 1, 1).getValues().flat();
+        var rowIndex = ids.indexOf(data.id) + 2;
+        if (rowIndex > 1) {
+          deptSheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
+        } else {
+          deptSheet.appendRow(rowData);
+        }
+      }
+      
+      var backupDeptSheet = ss.getSheetByName('Departments_backup');
+      if (!backupDeptSheet) {
+        backupDeptSheet = ss.insertSheet('Departments_backup');
+        backupDeptSheet.appendRow(['timestamp', 'action', 'id', 'name', 'icon', 'order']);
+      }
+      backupDeptSheet.appendRow([new Date(), action, data.id || '', data.name || '', data.icon || '', data.order || '']);
+      
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+    
+    if (action === 'departmentDelete') {
+      var deptSheet = ss.getSheetByName('Departments');
+      if (!deptSheet) return ContentService.createTextOutput(JSON.stringify({status: 'error'})).setMimeType(prop);
+      var ids = deptSheet.getRange(2, 1, deptSheet.getLastRow() - 1, 1).getValues().flat();
+      var rowIndex = ids.indexOf(data.id) + 2;
+      if (rowIndex > 1) {
+        var headers = deptSheet.getRange(1, 1, 1, deptSheet.getLastColumn()).getValues()[0];
+        var rowData = deptSheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
+        var item = {};
+        headers.forEach(function(h, i) { item[h] = rowData[i]; });
+        deptSheet.deleteRow(rowIndex);
+        
+        var backupDeptSheet = ss.getSheetByName('Departments_backup');
+        if (!backupDeptSheet) {
+          backupDeptSheet = ss.insertSheet('Departments_backup');
+          backupDeptSheet.appendRow(['timestamp', 'action', 'id', 'name', 'icon', 'order']);
+        }
+        backupDeptSheet.appendRow([new Date(), 'delete', item.id || '', item.name || '', item.icon || '', item.order || '']);
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+
+    if (action === 'personnelCreate' || action === 'personnelUpdate') {
+      var personnelSheet = ss.getSheetByName('Personnel');
+      if (!personnelSheet) {
+        personnelSheet = ss.insertSheet('Personnel');
+        personnelSheet.appendRow(['id', 'name', 'imageUrl', 'workplace']);
+      }
+      
+      var headers = personnelSheet.getRange(1, 1, 1, personnelSheet.getLastColumn()).getValues()[0];
+      var dataKeys = Object.keys(data);
+      var missingHeaders = dataKeys.filter(function(key) { return headers.indexOf(key) === -1; });
+      if (missingHeaders.length > 0) {
+        var newHeaders = headers.concat(missingHeaders);
+        personnelSheet.getRange(1, 1, 1, newHeaders.length).setValues([newHeaders]);
+        headers = newHeaders;
+      }
+      
+      var rowData = headers.map(function(h) {
+        if (h === 'id' && !data.id && action === 'personnelCreate') {
+          return Utilities.getUuid();
+        }
+        return data[h] || "";
+      });
+      
+      if (action === 'personnelCreate') {
+        personnelSheet.appendRow(rowData);
+      } else {
+        var ids = personnelSheet.getRange(2, 1, personnelSheet.getLastRow() - 1, 1).getValues().flat();
+        var rowIndex = ids.indexOf(data.id) + 2;
+        if (rowIndex > 1) {
+          personnelSheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
+        } else {
+          personnelSheet.appendRow(rowData);
+        }
+      }
+      
+      var backupPersonnelSheet = ss.getSheetByName('Personnel_backup');
+      if (!backupPersonnelSheet) {
+        backupPersonnelSheet = ss.insertSheet('Personnel_backup');
+        backupPersonnelSheet.appendRow(['timestamp', 'action', 'id', 'name', 'imageUrl', 'workplace']);
+      }
+      backupPersonnelSheet.appendRow([new Date(), action, data.id || '', data.name || '', data.imageUrl || '', data.workplace || '']);
+      
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+    
+    if (action === 'personnelDelete') {
+      var personnelSheet = ss.getSheetByName('Personnel');
+      if (!personnelSheet) return ContentService.createTextOutput(JSON.stringify({status: 'error'})).setMimeType(prop);
+      var ids = personnelSheet.getRange(2, 1, personnelSheet.getLastRow() - 1, 1).getValues().flat();
+      var rowIndex = ids.indexOf(data.id) + 2;
+      if (rowIndex > 1) {
+        var headers = personnelSheet.getRange(1, 1, 1, personnelSheet.getLastColumn()).getValues()[0];
+        var rowData = personnelSheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
+        var item = {};
+        headers.forEach(function(h, i) { item[h] = rowData[i]; });
+        personnelSheet.deleteRow(rowIndex);
+        
+        var backupPersonnelSheet = ss.getSheetByName('Personnel_backup');
+        if (!backupPersonnelSheet) {
+          backupPersonnelSheet = ss.insertSheet('Personnel_backup');
+          backupPersonnelSheet.appendRow(['timestamp', 'action', 'id', 'name', 'imageUrl', 'workplace']);
+        }
+        backupPersonnelSheet.appendRow([new Date(), 'delete', item.id || '', item.name || '', item.imageUrl || '', item.workplace || '']);
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+
+    if (action === 'borrowCreate' || action === 'borrowUpdate') {
+      var borrowSheet = ss.getSheetByName('Borrowing');
+      if (!borrowSheet) {
+        borrowSheet = ss.insertSheet('Borrowing');
+        borrowSheet.appendRow(['id', 'assetId', 'personnelIds', 'borrowDate', 'dueDate', 'returnDate', 'notes']);
+      }
+      
+      var headers = borrowSheet.getRange(1, 1, 1, borrowSheet.getLastColumn()).getValues()[0];
+      var dataKeys = Object.keys(data);
+      var missingHeaders = dataKeys.filter(function(key) { return headers.indexOf(key) === -1; });
+      if (missingHeaders.length > 0) {
+        var newHeaders = headers.concat(missingHeaders);
+        borrowSheet.getRange(1, 1, 1, newHeaders.length).setValues([newHeaders]);
+        headers = newHeaders;
+      }
+      
+      var dataCopy = JSON.parse(JSON.stringify(data));
+      if (dataCopy.personnelIds && Array.isArray(dataCopy.personnelIds)) {
+        dataCopy.personnelIds = dataCopy.personnelIds.join(',');
+      }
+      
+      var rowData = headers.map(function(h) {
+        if (h === 'id' && !dataCopy.id && action === 'borrowCreate') {
+          return Utilities.getUuid();
+        }
+        return dataCopy[h] || "";
+      });
+      
+      if (action === 'borrowCreate') {
+        borrowSheet.appendRow(rowData);
+      } else {
+        var ids = borrowSheet.getRange(2, 1, borrowSheet.getLastRow() - 1, 1).getValues().flat();
+        var rowIndex = ids.indexOf(dataCopy.id) + 2;
+        if (rowIndex > 1) {
+          borrowSheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
+        } else {
+          borrowSheet.appendRow(rowData);
+        }
+      }
+      
+      var backupBorrowSheet = ss.getSheetByName('Borrowing_backup');
+      if (!backupBorrowSheet) {
+        backupBorrowSheet = ss.insertSheet('Borrowing_backup');
+        backupBorrowSheet.appendRow(['timestamp', 'action', 'id', 'assetId', 'personnelIds', 'borrowDate', 'dueDate', 'returnDate', 'notes']);
+      }
+      backupBorrowSheet.appendRow([new Date(), action, dataCopy.id || '', dataCopy.assetId || '', dataCopy.personnelIds || '', dataCopy.borrowDate || '', dataCopy.dueDate || '', dataCopy.returnDate || '', dataCopy.notes || '']);
+      
+      return ContentService.createTextOutput(JSON.stringify({status: 'success'})).setMimeType(prop);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'Unknown action'})).setMimeType(prop);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({status: 'error', message: err.toString()})).setMimeType(prop);
+  }
+}
+
+function doGet(e) {
+  var action = e.parameter.action;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var prop = ContentService.MimeType.JSON;
+  
+  if (action === 'read') {
+    var assetSheet = ss.getSheetByName('Asset');
+    if (!assetSheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(prop);
+    var data = assetSheet.getDataRange().getValues();
+    if (data.length < 1) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(prop);
+    var headers = data[0];
+    var rows = data.slice(1);
+    var result = rows.map(function(row) {
+      var obj = {};
+      headers.forEach(function(h, i) { obj[h] = row[i]; });
+      return obj;
+    });
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(prop);
+  }
+  
+  if (action === 'readConfig') {
+    var dropdownSheet = ss.getSheetByName('Dropdown');
+    if (!dropdownSheet) return ContentService.createTextOutput(JSON.stringify({})).setMimeType(prop);
+    var data = dropdownSheet.getDataRange().getValues();
+    if (data.length < 1) return ContentService.createTextOutput(JSON.stringify({})).setMimeType(prop);
+    var headers = data[0];
+    var rows = data.slice(1);
+    
+    var categories = [];
+    var locations = [];
+    var statuses = [];
+    
+    rows.forEach(function(row) {
+      var type = row[0];
+      var id = row[1];
+      var name = row[2];
+      var prefix = row[3];
+      var order = row[4];
+      var item = { id: id, name: name, order: order };
+      if (type === 'category') {
+        item.prefix = prefix;
+        categories.push(item);
+      } else if (type === 'location') {
+        locations.push(item);
+      } else if (type === 'status') {
+        statuses.push(item);
+      }
+    });
+    
+    var config = {
+      categories: categories,
+      locations: locations,
+      statuses: statuses
+    };
+    return ContentService.createTextOutput(JSON.stringify(config)).setMimeType(prop);
+  }
+  
+  if (action === 'readDepartments') {
+    var deptSheet = ss.getSheetByName('Departments');
+    if (!deptSheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(prop);
+    var data = deptSheet.getDataRange().getValues();
+    if (data.length < 1) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(prop);
+    var headers = data[0];
+    var rows = data.slice(1);
+    var result = rows.map(function(row) {
+      var obj = {};
+      headers.forEach(function(h, i) { obj[h] = row[i]; });
+      return obj;
+    });
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(prop);
+  }
+  
+  if (action === 'readPersonnel') {
+    var personnelSheet = ss.getSheetByName('Personnel');
+    if (!personnelSheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(prop);
+    var data = personnelSheet.getDataRange().getValues();
+    if (data.length < 1) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(prop);
+    var headers = data[0];
+    var rows = data.slice(1);
+    var result = rows.map(function(row) {
+      var obj = {};
+      headers.forEach(function(h, i) { obj[h] = row[i]; });
+      return obj;
+    });
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(prop);
+  }
+  
+  if (action === 'readBorrowings') {
+    var borrowSheet = ss.getSheetByName('Borrowing');
+    if (!borrowSheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(prop);
+    var data = borrowSheet.getDataRange().getValues();
+    if (data.length < 1) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(prop);
+    var headers = data[0];
+    var rows = data.slice(1);
+    var result = rows.map(function(row) {
+      var obj = {};
+      headers.forEach(function(h, i) { obj[h] = row[i]; });
+      if (obj.personnelIds && typeof obj.personnelIds === 'string') {
+        obj.personnelIds = obj.personnelIds.split(',').filter(id => id);
+      }
+      return obj;
+    });
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(prop);
+  }
+  
+  if (action === 'readBackupConfig') {
+    return ContentService.createTextOutput(JSON.stringify({})).setMimeType(prop);
+  }
+}`;
+
+        // Default departments with "ทั้งหมด"
+        const DEFAULT_DEPARTMENTS = [
+            { id: 'all', name: 'ทั้งหมด', icon: 'globe', order: -1 },
+            { id: '1', name: 'สำนักงานใหญ่', icon: 'building', order: 0 }
+        ];
+
+        // Default categories
+        const DEFAULT_CATEGORIES = [
+            { id: '1', name: 'สื่อคณิตศาสตร์', prefix: 'M', order: 0 },
+            { id: '2', name: 'สื่อวิทยาศาสตร์', prefix: 'S', order: 1 },
+            { id: '3', name: 'อุปกรณ์คอมพิวเตอร์-ไอที', prefix: 'IT', order: 2 },
+            { id: '4', name: 'ของออกบูธ', prefix: 'B', order: 3 },
+            { id: '5', name: 'ทั่วไป', prefix: 'X', order: 4 }
+        ];
+
+        const DEFAULT_LOCATIONS = [
+            { id: '1', name: 'ห้องเก็บของ', order: 0 },
+            { id: '2', name: 'ห้องประชุม', order: 1 }
+        ];
+
+        const DEFAULT_STATUSES = [
+            { id: '1', name: 'ใช้งานได้', order: 0 },
+            { id: '2', name: 'รอส่งซ่อม', order: 1 },
+            { id: '3', name: 'กำลังซ่อม', order: 2 },
+            { id: '4', name: 'เสีย', order: 3 }
+        ];
+
+        const SORT_COLUMNS = [
+            { value: 'code', label: 'รหัส' },
+            { value: 'name', label: 'ชื่อ' },
+            { value: 'category', label: 'หมวดหมู่' },
+            { value: 'location', label: 'สถานที่' },
+            { value: 'price', label: 'ราคา' },
+            { value: 'date', label: 'วันที่' }
+        ];
+
+        const ALL_COLUMNS = [
+            { key: 'checkbox', label: '', sortable: false, always: true },
+            { key: 'code', label: 'รหัส/ชื่อ', sortable: true },
+            { key: 'category', label: 'หมวดหมู่', sortable: true },
+            { key: 'location', label: 'สถานที่', sortable: true },
+            { key: 'price', label: 'ราคา', sortable: true, align: 'text-right' },
+            { key: 'actions', label: 'จัดการ', sortable: false, align: 'text-center' }
+        ];
+
+        function App() {
+            const [scriptUrl, setScriptUrl] = useState(localStorage.getItem('mt_script_url') || '');
+            const [assets, setAssets] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [isFormOpen, setIsFormOpen] = useState(false);
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [isConfigOpen, setIsConfigOpen] = useState(false);
+            const [configType, setConfigType] = useState('categories');
+            const [sortRules, setSortRules] = useState([]);
+            const [showSortModal, setShowSortModal] = useState(false);
+            const [hiddenColumns, setHiddenColumns] = useState([]);
+            const [showColumnModal, setShowColumnModal] = useState(false);
+            const [isScanningForm, setIsScanningForm] = useState(false);
+            const [isScanningSearch, setIsScanningSearch] = useState(false);
+            const scannerFormRef = useRef(null);
+            const scannerSearchRef = useRef(null);
+            const [syncStatus, setSyncStatus] = useState('idle');
+            const [copied, setCopied] = useState(false);
+            const [totalViewMode, setTotalViewMode] = useState('total');
+            const [itemsViewMode, setItemsViewMode] = useState('total');
+            const [showSummary, setShowSummary] = useState(false);
+            const [selectedIds, setSelectedIds] = useState(new Set());
+            const [showPrintModal, setShowPrintModal] = useState(false);
+            const [printSize, setPrintSize] = useState('M');
+            const [printPaper, setPrintPaper] = useState('A4');
+            const [categories, setCategories] = useState(() => {
+                const saved = localStorage.getItem('mt_categories');
+                return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+            });
+            const [locations, setLocations] = useState(() => {
+                const saved = localStorage.getItem('mt_locations');
+                return saved ? JSON.parse(saved) : DEFAULT_LOCATIONS;
+            });
+            const [statuses, setStatuses] = useState(() => {
+                const saved = localStorage.getItem('mt_statuses');
+                return saved ? JSON.parse(saved) : DEFAULT_STATUSES;
+            });
+            // New state for departments, personnel, borrowings
+            const [departments, setDepartments] = useState(() => {
+                const saved = localStorage.getItem('mt_departments');
+                return saved ? JSON.parse(saved) : DEFAULT_DEPARTMENTS;
+            });
+            const [selectedDepartmentId, setSelectedDepartmentId] = useState(() => {
+                const saved = localStorage.getItem('mt_selected_dept');
+                return saved || 'all';
+            });
+            const [personnel, setPersonnel] = useState([]);
+            const [borrowings, setBorrowings] = useState([]);
+            const [isPersonnelOpen, setIsPersonnelOpen] = useState(false);
+            const [isPersonnelFormOpen, setIsPersonnelFormOpen] = useState(false);
+            const [currentPersonnel, setCurrentPersonnel] = useState(null);
+            const [isBorrowFormOpen, setIsBorrowFormOpen] = useState(false);
+            const [borrowFormData, setBorrowFormData] = useState({
+                personnelIds: [],
+                borrowDate: new Date().toISOString().split('T')[0],
+                dueDate: '',
+                duration: '',
+                notes: ''
+            });
+            const [selectedBorrowAssetIds, setSelectedBorrowAssetIds] = useState([]);
+            const [isDepartmentEditorOpen, setIsDepartmentEditorOpen] = useState(false);
+            const [showBorrowHistoryForPerson, setShowBorrowHistoryForPerson] = useState(null);
+            const [showBorrowedItemsSlide, setShowBorrowedItemsSlide] = useState(false);
+            const [borrowedItemsFilter, setBorrowedItemsFilter] = useState('all'); // 'all', 'overdue'
+            // For multi-select in borrow history and borrowed items
+            const [selectedBorrowIds, setSelectedBorrowIds] = useState(new Set());
+            const [selectedBorrowedIds, setSelectedBorrowedIds] = useState(new Set());
+
+            const [formData, setFormData] = useState({
+                id: '', code: '', name: '', category: 'สื่อคณิตศาสตร์', 
+                price: '', location: '', date: new Date().toISOString().split('T')[0], 
+                status: 'ใช้งานได้',
+                barcode: '',
+                hasWarranty: false,
+                warrantyYears: '',
+                warrantyMonths: '',
+                warrantyDays: '',
+                warrantyStart: '',
+                warrantyEnd: '',
+                departmentId: selectedDepartmentId === 'all' ? '' : selectedDepartmentId
+            });
+            const [barcodeDataURL, setBarcodeDataURL] = useState('');
+            const [showInstructions, setShowInstructions] = useState(false);
+            const [isOnline, setIsOnline] = useState(navigator.onLine);
+            const [pendingCount, setPendingCount] = useState(0);
+            const [showCheckbox, setShowCheckbox] = useState(false);
+            const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+            const locationDropdownRef = useRef(null);
+            const [showBarcodeInput, setShowBarcodeInput] = useState(false);
+
+            const [draggedItemId, setDraggedItemId] = useState(null);
+
+            // Online/offline
+            useEffect(() => {
+                const handleOnline = () => setIsOnline(true);
+                const handleOffline = () => setIsOnline(false);
+                window.addEventListener('online', handleOnline);
+                window.addEventListener('offline', handleOffline);
+                return () => {
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                };
+            }, []);
+
+            // Pending sync
+            useEffect(() => {
+                const loadPending = async () => {
+                    const pending = await getPending();
+                    setPendingCount(pending.length);
+                };
+                loadPending();
+            }, []);
+
+            useEffect(() => {
+                if (isOnline && pendingCount > 0) {
+                    syncPending();
+                }
+            }, [isOnline, pendingCount]);
+
+            const syncPending = async () => {
+                const pending = await getPending();
+                for (let p of pending) {
+                    try {
+                        await fetch(scriptUrl, {
+                            method: 'POST', mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: p.action, data: p.data })
+                        });
+                    } catch (e) {}
+                }
+                await clearPending(pending.map(p => p.id));
+                setPendingCount(0);
+                setTimeout(() => fetchAllData(), 1500);
+            };
+
+            // Load offline data
+            useEffect(() => {
+                const loadOfflineData = async () => {
+                    if (!isOnline) {
+                        const localAssets = await loadFromIndexedDB('assets');
+                        if (localAssets.length) setAssets(localAssets);
+                        const localDepts = await loadFromIndexedDB('departments');
+                        if (localDepts.length) setDepartments(localDepts);
+                        const localPersonnel = await loadFromIndexedDB('personnel');
+                        if (localPersonnel.length) setPersonnel(localPersonnel);
+                        const localBorrowings = await loadFromIndexedDB('borrowings');
+                        if (localBorrowings.length) setBorrowings(localBorrowings);
+                    }
+                };
+                loadOfflineData();
+            }, [isOnline]);
+
+            // Save to IndexedDB when data changes
+            useEffect(() => { if (assets.length) saveToIndexedDB('assets', assets); }, [assets]);
+            useEffect(() => { if (departments.length) saveToIndexedDB('departments', departments); }, [departments]);
+            useEffect(() => { if (personnel.length) saveToIndexedDB('personnel', personnel); }, [personnel]);
+            useEffect(() => { if (borrowings.length) saveToIndexedDB('borrowings', borrowings); }, [borrowings]);
+
+            useEffect(() => { refreshIcons(); }, [assets, loading, isScanningForm, isScanningSearch, isFormOpen, isSettingsOpen, syncStatus, totalViewMode, itemsViewMode, showSummary, isConfigOpen, selectedIds, showPrintModal, sortRules, hiddenColumns, showColumnModal, isOnline, pendingCount, categories, locations, statuses, departments, personnel, borrowings, isPersonnelOpen, isPersonnelFormOpen, isBorrowFormOpen, showBorrowHistoryForPerson, showBorrowedItemsSlide]);
+
+            // Load data when scriptUrl changes
+            useEffect(() => {
+                if (scriptUrl) {
+                    fetchAllData();
+                    fetchConfig();
+                }
+            }, [scriptUrl]);
+
+            // Save selected department to localStorage
+            useEffect(() => {
+                localStorage.setItem('mt_selected_dept', selectedDepartmentId);
+            }, [selectedDepartmentId]);
+
+            // Save departments to localStorage
+            useEffect(() => {
+                localStorage.setItem('mt_departments', JSON.stringify(departments));
+            }, [departments]);
+
+            // Save categories, locations, statuses to localStorage
+            useEffect(() => {
+                localStorage.setItem('mt_categories', JSON.stringify(categories));
+            }, [categories]);
+            useEffect(() => {
+                localStorage.setItem('mt_locations', JSON.stringify(locations));
+            }, [locations]);
+            useEffect(() => {
+                localStorage.setItem('mt_statuses', JSON.stringify(statuses));
+            }, [statuses]);
+
+            // Fetch all data from GAS with sync status
+            const fetchAllData = async () => {
+                if (!scriptUrl) return;
+                setSyncStatus('syncing');
+                setLoading(true);
+                try {
+                    const [assetsRes, deptsRes, personnelRes, borrowingsRes] = await Promise.all([
+                        fetch(`${scriptUrl}?action=read`),
+                        fetch(`${scriptUrl}?action=readDepartments`),
+                        fetch(`${scriptUrl}?action=readPersonnel`),
+                        fetch(`${scriptUrl}?action=readBorrowings`)
+                    ]);
+                    const assetsData = await assetsRes.json();
+                    const deptsData = await deptsRes.json();
+                    const personnelData = await personnelRes.json();
+                    const borrowingsData = await borrowingsRes.json();
+                    setAssets(Array.isArray(assetsData) ? assetsData : []);
+                    let depts = Array.isArray(deptsData) ? deptsData : [];
+                    if (!depts.find(d => d.id === 'all')) {
+                        depts = [...DEFAULT_DEPARTMENTS.filter(d => d.id === 'all'), ...depts];
+                    }
+                    setDepartments(depts);
+                    setPersonnel(Array.isArray(personnelData) ? personnelData : []);
+                    const borrows = Array.isArray(borrowingsData) ? borrowingsData.map(b => ({
+                        ...b,
+                        personnelIds: b.personnelIds ? (typeof b.personnelIds === 'string' ? b.personnelIds.split(',').filter(id => id) : b.personnelIds) : []
+                    })) : [];
+                    setBorrowings(borrows);
+                    setSyncStatus('success');
+                    setTimeout(() => setSyncStatus('idle'), 3000);
+                } catch (e) {
+                    console.warn('Offline mode');
+                    setSyncStatus('error');
+                    const localAssets = await loadFromIndexedDB('assets');
+                    if (localAssets.length) setAssets(localAssets);
+                    const localDepts = await loadFromIndexedDB('departments');
+                    if (localDepts.length) setDepartments(localDepts);
+                    const localPersonnel = await loadFromIndexedDB('personnel');
+                    if (localPersonnel.length) setPersonnel(localPersonnel);
+                    const localBorrowings = await loadFromIndexedDB('borrowings');
+                    if (localBorrowings.length) setBorrowings(localBorrowings);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Original fetchData (for assets only) - update sync status
+            const fetchData = async () => {
+                if (!scriptUrl) return;
+                setSyncStatus('syncing');
+                setLoading(true);
+                try {
+                    const response = await fetch(`${scriptUrl}?action=read`);
+                    const data = await response.json();
+                    setAssets(Array.isArray(data) ? data : []);
+                    setSyncStatus('success');
+                    setTimeout(() => setSyncStatus('idle'), 3000);
+                } catch (e) { 
+                    setSyncStatus('error');
+                    const localAssets = await loadFromIndexedDB('assets');
+                    if (localAssets.length) setAssets(localAssets);
+                } finally { setLoading(false); }
+            };
+
+            // Original config functions
+            const fetchConfig = async () => {
+                if (!scriptUrl) return;
+                try {
+                    const response = await fetch(`${scriptUrl}?action=readConfig`);
+                    const config = await response.json();
+                    if (config.categories) setCategories(config.categories);
+                    if (config.locations) setLocations(config.locations);
+                    if (config.statuses) setStatuses(config.statuses);
+                } catch (e) {
+                    console.warn('Failed to load config from sheet');
+                }
+            };
+
+            const saveConfigToSheet = async () => {
+                if (!scriptUrl) return;
+                try {
+                    await fetch(scriptUrl, {
+                        method: 'POST', mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            action: 'saveConfig', 
+                            data: { categories, locations, statuses } 
+                        })
+                    });
+                } catch (e) {}
+            };
+
+            const importFromBackup = async () => {
+                if (!scriptUrl) { setIsSettingsOpen(true); return; }
+                try {
+                    const response = await fetch(`${scriptUrl}?action=readBackupConfig`);
+                    const config = await response.json();
+                    if (config.categories) setCategories(config.categories);
+                    if (config.locations) setLocations(config.locations);
+                    if (config.statuses) setStatuses(config.statuses);
+                    alert('นำเข้าข้อมูลสำเร็จ');
+                } catch (e) {
+                    alert('นำเข้าข้อมูลล้มเหลว');
+                }
+            };
+
+            useEffect(() => {
+                if (scriptUrl) {
+                    saveConfigToSheet();
+                }
+            }, [categories, locations, statuses]);
+
+            // Filter assets by selected department (all means no filter)
+            const filteredAssetsByDept = useMemo(() => {
+                if (selectedDepartmentId === 'all') return assets;
+                return assets.filter(a => a.departmentId === selectedDepartmentId);
+            }, [assets, selectedDepartmentId]);
+
+            const filteredAssetsForItems = useMemo(() => {
+                if (itemsViewMode === 'total') return filteredAssetsByDept;
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+                return filteredAssetsByDept.filter(item => {
+                    if (!item.date) return false;
+                    const d = new Date(item.date);
+                    if (itemsViewMode === 'month') {
+                        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                    } else {
+                        return d.getFullYear() === currentYear;
+                    }
+                });
+            }, [filteredAssetsByDept, itemsViewMode]);
+
+            const totalItems = filteredAssetsForItems.length;
+            const totalValue = useMemo(() => {
+                if (totalViewMode === 'total') {
+                    return filteredAssetsByDept.reduce((sum, item) => sum + Number(item.price || 0), 0);
+                } else if (totalViewMode === 'month') {
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+                    return filteredAssetsByDept.reduce((sum, item) => {
+                        if (item.date) {
+                            const d = new Date(item.date);
+                            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                                return sum + Number(item.price || 0);
+                            }
+                        }
+                        return sum;
+                    }, 0);
+                } else {
+                    const currentYear = new Date().getFullYear();
+                    return filteredAssetsByDept.reduce((sum, item) => {
+                        if (item.date) {
+                            const d = new Date(item.date);
+                            if (d.getFullYear() === currentYear) {
+                                return sum + Number(item.price || 0);
+                            }
+                        }
+                        return sum;
+                    }, 0);
+                }
+            }, [filteredAssetsByDept, totalViewMode]);
+
+            // Borrowing stats
+            const currentlyBorrowed = useMemo(() => {
+                return borrowings.filter(b => !b.returnDate).length;
+            }, [borrowings]);
+
+            const overdueBorrowed = useMemo(() => {
+                const today = new Date();
+                return borrowings.filter(b => !b.returnDate && new Date(b.dueDate) < today).length;
+            }, [borrowings]);
+
+            // Generate barcode
+            const generateBarcode = () => {
+                if (!formData.code || !formData.name) {
+                    setBarcodeDataURL('');
+                    return;
+                }
+                const canvas = document.createElement('canvas');
+                try {
+                    JsBarcode(canvas, formData.code, {
+                        format: "CODE128",
+                        lineColor: "#000",
+                        width: 3,
+                        height: 80,
+                        displayValue: true,
+                        fontSize: 16,
+                        text: `${formData.name} - ${formData.code}`
+                    });
+                    setBarcodeDataURL(canvas.toDataURL("image/png"));
+                } catch (e) {
+                    console.error("Barcode generation failed", e);
+                    setBarcodeDataURL('');
+                }
+            };
+
+            useEffect(() => {
+                generateBarcode();
+            }, [formData.code, formData.name]);
+
+            const downloadBarcode = () => {
+                if (!barcodeDataURL) return;
+                const link = document.createElement('a');
+                link.download = `barcode-${formData.code}.png`;
+                link.href = barcodeDataURL;
+                link.click();
+            };
+
+            const openForm = (item = null) => {
+                if (item) {
+                    setFormData({
+                        ...item,
+                        barcode: item.barcode || '',
+                        hasWarranty: item.hasWarranty === 'true' || item.hasWarranty === true,
+                        warrantyYears: item.warrantyYears || '',
+                        warrantyMonths: item.warrantyMonths || '',
+                        warrantyDays: item.warrantyDays || '',
+                        warrantyStart: item.warrantyStart || '',
+                        warrantyEnd: item.warrantyEnd || '',
+                        departmentId: item.departmentId || (selectedDepartmentId === 'all' ? '' : selectedDepartmentId)
+                    });
+                    setShowBarcodeInput(!!(item.barcode));
+                } else {
+                    const today = new Date().toISOString().split('T')[0];
+                    setFormData({ 
+                        id: '', code: '', name: '', category: categories[0]?.name || 'สื่อคณิตศาสตร์', 
+                        price: '', location: '', date: today, 
+                        status: statuses[0]?.name || 'ใช้งานได้',
+                        barcode: '',
+                        hasWarranty: false,
+                        warrantyYears: '',
+                        warrantyMonths: '',
+                        warrantyDays: '',
+                        warrantyStart: '',
+                        warrantyEnd: '',
+                        departmentId: selectedDepartmentId === 'all' ? '' : selectedDepartmentId
+                    });
+                    setShowBarcodeInput(false);
+                }
+                setIsFormOpen(true);
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!scriptUrl) { setIsSettingsOpen(true); return; }
+                
+                const action = formData.id ? 'update' : 'create';
+                const tempId = action === 'create' ? `temp-${Date.now()}` : formData.id;
+                const newAsset = { ...formData, id: tempId };
+                
+                if (action === 'create') {
+                    setAssets(prev => [newAsset, ...prev]);
+                } else {
+                    setAssets(prev => prev.map(a => a.id === formData.id ? newAsset : a));
+                }
+                
+                setIsFormOpen(false);
+                
+                if (!isOnline) {
+                    await addPending(formData, action);
+                    setPendingCount(prev => prev + 1);
+                } else {
+                    try {
+                        await fetch(scriptUrl, {
+                            method: 'POST', mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action, data: formData })
+                        });
+                    } catch (e) {
+                        await addPending(formData, action);
+                        setPendingCount(prev => prev + 1);
+                    }
+                }
+            };
+
+            const handleDelete = async (id) => {
+                if (!confirm('คุณแน่ใจหรือไม่ที่จะลบรายการนี้?')) return;
+                if (!scriptUrl) { setIsSettingsOpen(true); return; }
+
+                setAssets(prev => prev.filter(a => a.id !== id));
+                setIsFormOpen(false);
+
+                if (!isOnline) {
+                    await addPending({ id }, 'delete');
+                    setPendingCount(prev => prev + 1);
+                } else {
+                    try {
+                        await fetch(scriptUrl, {
+                            method: 'POST', mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'delete', data: { id } })
+                        });
+                    } catch (e) {
+                        await addPending({ id }, 'delete');
+                        setPendingCount(prev => prev + 1);
+                    }
+                }
+            };
+
+            // Auto-generate code when category changes in new asset
+            useEffect(() => {
+                if (!formData.id && !formData.code && isFormOpen) {
+                    const cat = categories.find(c => c.name === formData.category);
+                    const prefix = (cat && cat.prefix) ? cat.prefix : 'X';
+                    const count = assets.filter(a => a.category === formData.category).length + 1;
+                    const newCode = `${prefix}-${String(count).padStart(6, '0')}`;
+                    setFormData(prev => ({ ...prev, code: newCode }));
+                }
+            }, [formData.category, assets.length, formData.id, isFormOpen, categories]);
+
+            // Personnel functions
+            const openPersonnelForm = (person = null) => {
+                setCurrentPersonnel(person ? { ...person } : { id: '', name: '', imageUrl: '', workplace: '' });
+                setIsPersonnelFormOpen(true);
+            };
+
+            const savePersonnel = async () => {
+                if (!currentPersonnel.name) return;
+                const action = currentPersonnel.id ? 'personnelUpdate' : 'personnelCreate';
+                const tempId = action === 'personnelCreate' ? `temp-${Date.now()}` : currentPersonnel.id;
+                const newPerson = { ...currentPersonnel, id: tempId };
+                
+                if (action === 'personnelCreate') {
+                    setPersonnel(prev => [...prev, newPerson]);
+                } else {
+                    setPersonnel(prev => prev.map(p => p.id === currentPersonnel.id ? newPerson : p));
+                }
+                
+                setIsPersonnelFormOpen(false);
+                
+                if (!isOnline) {
+                    await addPending(currentPersonnel, action);
+                    setPendingCount(prev => prev + 1);
+                } else {
+                    try {
+                        await fetch(scriptUrl, {
+                            method: 'POST', mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action, data: currentPersonnel })
+                        });
+                    } catch (e) {
+                        await addPending(currentPersonnel, action);
+                        setPendingCount(prev => prev + 1);
+                    }
+                }
+            };
+
+            const deletePersonnel = async (id) => {
+                if (!confirm('ลบบุคลากรนี้?')) return;
+                setPersonnel(prev => prev.filter(p => p.id !== id));
+                if (!isOnline) {
+                    await addPending({ id }, 'personnelDelete');
+                } else {
+                    try {
+                        await fetch(scriptUrl, {
+                            method: 'POST', mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'personnelDelete', data: { id } })
+                        });
+                    } catch (e) {
+                        await addPending({ id }, 'personnelDelete');
+                    }
+                }
+            };
+
+            // Borrow functions
+            const openBorrowForm = () => {
+                setSelectedBorrowAssetIds(Array.from(selectedIds));
+                setBorrowFormData({
+                    personnelIds: [],
+                    borrowDate: new Date().toISOString().split('T')[0],
+                    dueDate: '',
+                    duration: '',
+                    notes: ''
+                });
+                setIsBorrowFormOpen(true);
+            };
+
+            // Auto-calculate dueDate/duration in real-time
+            useEffect(() => {
+                const { borrowDate, dueDate, duration } = borrowFormData;
+                if (dueDate && borrowDate && !duration) {
+                    const borrow = new Date(borrowDate);
+                    const due = new Date(dueDate);
+                    if (due > borrow) {
+                        const diffTime = due - borrow;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        setBorrowFormData(prev => ({ ...prev, duration: diffDays.toString() }));
+                    }
+                } else if (duration && borrowDate && !dueDate) {
+                    const borrow = new Date(borrowDate);
+                    borrow.setDate(borrow.getDate() + parseInt(duration));
+                    setBorrowFormData(prev => ({ ...prev, dueDate: borrow.toISOString().split('T')[0] }));
+                }
+            }, [borrowFormData.dueDate, borrowFormData.duration, borrowFormData.borrowDate]);
+
+            const handleBorrowSubmit = async () => {
+                if (!borrowFormData.personnelIds.length || !borrowFormData.borrowDate) return;
+                let dueDate = borrowFormData.dueDate;
+                if (!dueDate && borrowFormData.duration) {
+                    const borrow = new Date(borrowFormData.borrowDate);
+                    borrow.setDate(borrow.getDate() + parseInt(borrowFormData.duration));
+                    dueDate = borrow.toISOString().split('T')[0];
+                }
+                // Create borrow records for each selected asset
+                for (let assetId of selectedBorrowAssetIds) {
+                    const newBorrow = {
+                        id: `temp-${Date.now()}-${assetId}`,
+                        assetId,
+                        personnelIds: borrowFormData.personnelIds,
+                        borrowDate: borrowFormData.borrowDate,
+                        dueDate: dueDate || '',
+                        returnDate: null,
+                        notes: borrowFormData.notes
+                    };
+                    setBorrowings(prev => [...prev, newBorrow]);
+                    if (!isOnline) {
+                        await addPending(newBorrow, 'borrowCreate');
+                    } else {
+                        try {
+                            await fetch(scriptUrl, {
+                                method: 'POST', mode: 'no-cors',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'borrowCreate', data: newBorrow })
+                            });
+                        } catch (e) {
+                            await addPending(newBorrow, 'borrowCreate');
+                        }
+                    }
+                }
+                setSelectedIds(new Set());
+                setIsBorrowFormOpen(false);
+            };
+
+            const returnBorrow = async (borrowId) => {
+                const borrow = borrowings.find(b => b.id === borrowId);
+                if (!borrow) return;
+                const updated = { ...borrow, returnDate: new Date().toISOString().split('T')[0] };
+                setBorrowings(prev => prev.map(b => b.id === borrowId ? updated : b));
+                if (!isOnline) {
+                    await addPending(updated, 'borrowUpdate');
+                } else {
+                    try {
+                        await fetch(scriptUrl, {
+                            method: 'POST', mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'borrowUpdate', data: updated })
+                        });
+                    } catch (e) {
+                        await addPending(updated, 'borrowUpdate');
+                    }
+                }
+            };
+
+            const extendBorrow = (borrowId, days) => {
+                const borrow = borrowings.find(b => b.id === borrowId);
+                if (!borrow || !days) return;
+                const due = new Date(borrow.dueDate);
+                due.setDate(due.getDate() + parseInt(days));
+                const updated = { ...borrow, dueDate: due.toISOString().split('T')[0] };
+                setBorrowings(prev => prev.map(b => b.id === borrowId ? updated : b));
+                if (!isOnline) {
+                    addPending(updated, 'borrowUpdate');
+                } else {
+                    fetch(scriptUrl, {
+                        method: 'POST', mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'borrowUpdate', data: updated })
+                    }).catch(() => addPending(updated, 'borrowUpdate'));
+                }
+            };
+
+            // Department editor functions
+            const addDepartment = (name, icon) => {
+                const newDept = {
+                    id: Date.now().toString(),
+                    name,
+                    icon: icon || 'folder',
+                    order: departments.length
+                };
+                setDepartments([...departments, newDept]);
+                if (!isOnline) {
+                    addPending(newDept, 'departmentCreate');
+                } else {
+                    fetch(scriptUrl, {
+                        method: 'POST', mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'departmentCreate', data: newDept })
+                    }).catch(() => addPending(newDept, 'departmentCreate'));
+                }
+            };
+
+            const updateDepartment = (id, field, value) => {
+                setDepartments(prev => prev.map(d => d.id === id ? { ...d, [field]: value } : d));
+            };
+
+            const deleteDepartment = (id) => {
+                if (id === 'all') return;
+                setDepartments(prev => prev.filter(d => d.id !== id));
+                if (!isOnline) {
+                    addPending({ id }, 'departmentDelete');
+                } else {
+                    fetch(scriptUrl, {
+                        method: 'POST', mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'departmentDelete', data: { id } })
+                    }).catch(() => addPending({ id }, 'departmentDelete'));
+                }
+            };
+
+            // Original config editor functions
+            const openConfigEditor = (type) => {
+                setConfigType(type);
+                setIsConfigOpen(true);
+            };
+
+            const addConfigItem = (type, name) => {
+                const items = type === 'categories' ? categories : type === 'locations' ? locations : statuses;
+                const newItem = {
+                    id: Date.now().toString(),
+                    name,
+                    ...(type === 'categories' ? { prefix: 'X' } : {}),
+                    order: items.length
+                };
+                if (type === 'categories') {
+                    setCategories([...categories, newItem]);
+                } else if (type === 'locations') {
+                    setLocations([...locations, newItem]);
+                } else {
+                    setStatuses([...statuses, newItem]);
+                }
+            };
+
+            const updateConfigItem = (type, id, field, value) => {
+                const updateFn = (items) => items.map(item => item.id === id ? { ...item, [field]: value } : item);
+                if (type === 'categories') {
+                    setCategories(updateFn(categories));
+                } else if (type === 'locations') {
+                    setLocations(updateFn(locations));
+                } else {
+                    setStatuses(updateFn(statuses));
+                }
+            };
+
+            const deleteConfigItem = (type, id) => {
+                const filterFn = (items) => items.filter(item => item.id !== id);
+                if (type === 'categories') {
+                    setCategories(filterFn(categories));
+                } else if (type === 'locations') {
+                    setLocations(filterFn(locations));
+                } else {
+                    setStatuses(filterFn(statuses));
+                }
+            };
+
+            const moveConfigItem = (type, id, direction) => {
+                const items = type === 'categories' ? [...categories] : type === 'locations' ? [...locations] : [...statuses];
+                const index = items.findIndex(i => i.id === id);
+                if (direction === 'up' && index > 0) {
+                    const temp = items[index].order;
+                    items[index].order = items[index-1].order;
+                    items[index-1].order = temp;
+                } else if (direction === 'down' && index < items.length-1) {
+                    const temp = items[index].order;
+                    items[index].order = items[index+1].order;
+                    items[index+1].order = temp;
+                }
+                items.sort((a,b) => a.order - b.order);
+                if (type === 'categories') {
+                    setCategories(items);
+                } else if (type === 'locations') {
+                    setLocations(items);
+                } else {
+                    setStatuses(items);
+                }
+            };
+
+            const resetConfig = () => {
+                if (configType === 'categories') {
+                    setCategories(DEFAULT_CATEGORIES);
+                } else if (configType === 'locations') {
+                    setLocations(DEFAULT_LOCATIONS);
+                } else {
+                    setStatuses(DEFAULT_STATUSES);
+                }
+            };
+
+            // Drag and drop for config items
+            const handleDragStart = (e, itemId) => {
+                setDraggedItemId(itemId);
+                e.dataTransfer.setData('text/plain', itemId);
+                e.target.classList.add('dragging');
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+            };
+
+            const handleDrop = (e, targetId, type) => {
+                e.preventDefault();
+                const sourceId = e.dataTransfer.getData('text/plain');
+                if (sourceId === targetId) return;
+
+                const items = type === 'categories' ? [...categories] : type === 'locations' ? [...locations] : [...statuses];
+                const sourceIndex = items.findIndex(i => i.id === sourceId);
+                const targetIndex = items.findIndex(i => i.id === targetId);
+                if (sourceIndex === -1 || targetIndex === -1) return;
+
+                const sourceOrder = items[sourceIndex].order;
+                const targetOrder = items[targetIndex].order;
+                items[sourceIndex].order = targetOrder;
+                items[targetIndex].order = sourceOrder;
+
+                items.sort((a,b) => a.order - b.order);
+
+                if (type === 'categories') {
+                    setCategories(items);
+                } else if (type === 'locations') {
+                    setLocations(items);
+                } else {
+                    setStatuses(items);
+                }
+
+                setDraggedItemId(null);
+                e.target.classList.remove('dragging');
+            };
+
+            const handleDragEnd = (e) => {
+                setDraggedItemId(null);
+                e.target.classList.remove('dragging');
+            };
+
+            // Scanner functions
+            const startScanner = (type, targetRef) => {
+                if (!targetRef.current) {
+                    targetRef.current = new Html5Qrcode("reader");
+                }
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                targetRef.current.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => {
+                        if (type === 'form') {
+                            setFormData(prev => ({ ...prev, barcode: decodedText }));
+                            stopScanner(type);
+                        } else if (type === 'search') {
+                            setSearchTerm(decodedText);
+                            stopScanner(type);
+                        }
+                    },
+                    (error) => console.warn(error)
+                ).catch(err => console.error(err));
+            };
+
+            const stopScanner = (type) => {
+                if (type === 'form' && scannerFormRef.current) {
+                    scannerFormRef.current.stop().then(() => {
+                        setIsScanningForm(false);
+                        scannerFormRef.current = null;
+                    }).catch(err => console.error(err));
+                } else if (type === 'search' && scannerSearchRef.current) {
+                    scannerSearchRef.current.stop().then(() => {
+                        setIsScanningSearch(false);
+                        scannerSearchRef.current = null;
+                    }).catch(err => console.error(err));
+                }
+            };
+
+            // Filtered assets for main table with search and sort
+            const filteredAssets = useMemo(() => {
+                const term = searchTerm.toLowerCase().trim();
+                let filtered = filteredAssetsByDept;
+                if (term) {
+                    filtered = filtered.filter(a => {
+                        const code = (a.code || '').toLowerCase();
+                        const name = (a.name || '').toLowerCase();
+                        const location = (a.location || '').toLowerCase();
+                        return code.includes(term) || name.includes(term) || location.includes(term);
+                    });
+                }
+                if (sortRules.length === 0) return filtered;
+                return [...filtered].sort((a, b) => {
+                    for (let rule of sortRules) {
+                        const col = rule.col;
+                        const dir = rule.dir === 'asc' ? 1 : -1;
+                        let valA = a[col];
+                        let valB = b[col];
+                        if (col === 'price') {
+                            valA = Number(valA) || 0;
+                            valB = Number(valB) || 0;
+                        } else if (col === 'date') {
+                            valA = valA ? new Date(valA) : 0;
+                            valB = valB ? new Date(valB) : 0;
+                        } else {
+                            valA = (valA || '').toString().toLowerCase();
+                            valB = (valB || '').toString().toLowerCase();
+                        }
+                        if (valA < valB) return -1 * dir;
+                        if (valA > valB) return 1 * dir;
+                    }
+                    return 0;
+                });
+            }, [filteredAssetsByDept, searchTerm, sortRules]);
+
+            const toggleSelect = (id) => {
+                const newSet = new Set(selectedIds);
+                if (newSet.has(id)) newSet.delete(id);
+                else newSet.add(id);
+                setSelectedIds(newSet);
+            };
+
+            const selectAll = () => {
+                if (selectedIds.size === filteredAssets.length) {
+                    setSelectedIds(new Set());
+                } else {
+                    setSelectedIds(new Set(filteredAssets.map(a => a.id)));
+                }
+            };
+
+            const downloadBarcodes = async () => {
+                const selectedItems = assets.filter(a => selectedIds.has(a.id));
+                if (selectedItems.length === 0) return;
+                if (selectedItems.length === 1) {
+                    const item = selectedItems[0];
+                    const canvas = document.createElement('canvas');
+                    try {
+                        JsBarcode(canvas, item.code, {
+                            format: "CODE128",
+                            lineColor: "#000",
+                            width: 3,
+                            height: 80,
+                            displayValue: true,
+                            fontSize: 14,
+                            text: `${item.name} - ${item.code}`
+                        });
+                        const dataURL = canvas.toDataURL("image/png");
+                        const link = document.createElement('a');
+                        link.download = `barcode-${item.code}.png`;
+                        link.href = dataURL;
+                        link.click();
+                    } catch (e) {}
+                } else {
+                    const zip = new JSZip();
+                    const folder = zip.folder("barcodes");
+                    for (let item of selectedItems) {
+                        const canvas = document.createElement('canvas');
+                        try {
+                            JsBarcode(canvas, item.code, {
+                                format: "CODE128",
+                                lineColor: "#000",
+                                width: 3,
+                                height: 80,
+                                displayValue: true,
+                                fontSize: 14,
+                                text: `${item.name} - ${item.code}`
+                            });
+                            const dataURL = canvas.toDataURL("image/png");
+                            const base64Data = dataURL.split(',')[1];
+                            folder.file(`${item.code}.png`, base64Data, { base64: true });
+                        } catch (e) {}
+                    }
+                    const content = await zip.generateAsync({ type: "blob" });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = `barcodes-${Date.now()}.zip`;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                }
+            };
+
+            const printBarcodes = () => {
+                const selectedItems = assets.filter(a => selectedIds.has(a.id));
+                if (selectedItems.length === 0) return;
+                const printWindow = window.open('', '_blank');
+                const styles = `
+                    <style>
+                        body { font-family: 'Kanit', sans-serif; margin: 0; padding: 0; }
+                        .barcode-page {
+                            display: flex;
+                            flex-wrap: wrap;
+                            gap: 0;
+                            justify-content: flex-start;
+                        }
+                        .barcode-item {
+                            text-align: center;
+                            width: ${printSize === 'S' ? '150px' : printSize === 'M' ? '200px' : '250px'};
+                            box-sizing: border-box;
+                        }
+                        .barcode-item img { max-width: 100%; height: auto; display: block; }
+                        @media print {
+                            .no-print { display: none; }
+                        }
+                    </style>
+                `;
+                let content = '<div class="barcode-page">';
+                selectedItems.forEach(item => {
+                    const canvas = document.createElement('canvas');
+                    try {
+                        JsBarcode(canvas, item.code, {
+                            format: "CODE128",
+                            lineColor: "#000",
+                            width: 3,
+                            height: 80,
+                            displayValue: true,
+                            fontSize: 14,
+                            text: `${item.name} - ${item.code}`
+                        });
+                        const dataURL = canvas.toDataURL("image/png");
+                        content += `<div class="barcode-item"><img src="${dataURL}" /></div>`;
+                    } catch (e) {}
+                });
+                content += '</div>';
+                printWindow.document.write(`
+                    <html>
+                        <head><title>พิมพ์บาร์โค้ด</title>${styles}</head>
+                        <body>${content}</body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+                setShowPrintModal(false);
+            };
+
+            // Sort modal functions
+            const addSortRule = (col, dir) => {
+                setSortRules([...sortRules, { col, dir }]);
+            };
+
+            const removeSortRule = (index) => {
+                const newRules = [...sortRules];
+                newRules.splice(index, 1);
+                setSortRules(newRules);
+            };
+
+            // Column visibility
+            const toggleColumn = (colKey) => {
+                if (hiddenColumns.includes(colKey)) {
+                    setHiddenColumns(hiddenColumns.filter(c => c !== colKey));
+                } else {
+                    setHiddenColumns([...hiddenColumns, colKey]);
+                }
+            };
+
+            const visibleColumns = ALL_COLUMNS.filter(col => !hiddenColumns.includes(col.key) || col.always);
+
+            // Warranty auto-calculation effects
+            useEffect(() => {
+                if (!formData.hasWarranty) return;
+                if (formData.warrantyStart && (formData.warrantyYears || formData.warrantyMonths || formData.warrantyDays)) {
+                    const start = new Date(formData.warrantyStart);
+                    const years = parseInt(formData.warrantyYears) || 0;
+                    const months = parseInt(formData.warrantyMonths) || 0;
+                    const days = parseInt(formData.warrantyDays) || 0;
+                    const end = new Date(start);
+                    end.setFullYear(end.getFullYear() + years);
+                    end.setMonth(end.getMonth() + months);
+                    end.setDate(end.getDate() + days);
+                    const endStr = end.toISOString().split('T')[0];
+                    if (endStr !== formData.warrantyEnd) {
+                        setFormData(prev => ({ ...prev, warrantyEnd: endStr }));
+                    }
+                }
+            }, [formData.warrantyStart, formData.warrantyYears, formData.warrantyMonths, formData.warrantyDays, formData.hasWarranty]);
+
+            useEffect(() => {
+                if (!formData.hasWarranty) return;
+                if (formData.warrantyStart && formData.warrantyEnd) {
+                    const start = new Date(formData.warrantyStart);
+                    const end = new Date(formData.warrantyEnd);
+                    if (end > start) {
+                        let years = end.getFullYear() - start.getFullYear();
+                        let months = end.getMonth() - start.getMonth();
+                        let days = end.getDate() - start.getDate();
+                        if (days < 0) {
+                            months -= 1;
+                            const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+                            days += prevMonth.getDate();
+                        }
+                        if (months < 0) {
+                            years -= 1;
+                            months += 12;
+                        }
+                        const newYears = years.toString();
+                        const newMonths = months.toString();
+                        const newDays = days.toString();
+                        if (newYears !== formData.warrantyYears || newMonths !== formData.warrantyMonths || newDays !== formData.warrantyDays) {
+                            setFormData(prev => ({ ...prev, warrantyYears: newYears, warrantyMonths: newMonths, warrantyDays: newDays }));
+                        }
+                    }
+                }
+            }, [formData.warrantyStart, formData.warrantyEnd, formData.hasWarranty]);
+
+            // Click outside for location dropdown
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (locationDropdownRef.current && !locationDropdownRef.current.contains(event.target)) {
+                        setShowLocationDropdown(false);
+                    }
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, []);
+
+            return h('div', { className: "min-h-screen flex flex-col text-slate-800" },
+                // Header
+                h('div', { className: "bg-white shadow-sm z-30 sticky top-0" },
+                    h('div', { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" },
+                        h('div', { className: "flex justify-between h-16 items-center" },
+                            h('div', { className: "flex items-center gap-3" },
+                                h('div', { className: "bg-indigo-600 p-2 rounded-lg shadow-indigo-200 shadow-md" },
+                                    h(Icon, { name: "box", className: "w-5 h-5 text-white" })
+                                ),
+                                h('div', null,
+                                    h('h1', { className: "font-bold text-lg leading-tight tracking-tight text-slate-800" }, "Math Talent H.Q."),
+                                    h('p', { className: "text-[10px] text-slate-400 font-medium tracking-wider uppercase" }, "Asset Management System")
+                                )
+                            ),
+                            h('div', { className: "flex items-center gap-3" },
+                                !isOnline && h('span', { className: "offline-badge hidden sm:inline" }, "ออฟไลน์"),
+                                pendingCount > 0 && h('span', { className: "bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-bold hidden sm:inline" }, `รอซิงก์ ${pendingCount}`),
+                                h('div', { className: `hidden sm:flex px-3 py-1 rounded-full items-center gap-2 border ${syncStatus === 'success' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-500'}` },
+                                    h('div', { className: `w-2 h-2 rounded-full ${syncStatus === 'syncing' ? 'bg-amber-400 animate-pulse' : syncStatus === 'success' ? 'bg-green-500' : 'bg-slate-300'}` }),
+                                    h('span', { className: "text-xs font-bold" }, syncStatus === 'success' ? 'Cloud Synced' : syncStatus === 'syncing' ? 'Syncing...' : 'Standby')
+                                ),
+                                h('button', { 
+                                    onClick: () => openConfigEditor('categories'),
+                                    className: "flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-semibold text-sm transition-all" 
+                                }, h(Icon, { name: "list", className: "w-4 h-4" }), 
+                                  h('span', { className: "hidden sm:inline" }, "Dropdown")),
+                                h('button', { 
+                                    onClick: () => setIsPersonnelOpen(true),
+                                    className: "flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-semibold text-sm transition-all" 
+                                }, h(Icon, { name: "users", className: "w-4 h-4" }), 
+                                  h('span', { className: "hidden sm:inline" }, "บุคลากร")),
+                                h('button', { 
+                                    onClick: () => setShowSummary(!showSummary), 
+                                    className: "flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold text-sm transition-all" 
+                                }, h(Icon, { name: "bar-chart-2", className: "w-4 h-4" }), 
+                                  h('span', { className: "hidden sm:inline" }, showSummary ? 'ซ่อนสรุป' : 'ดูสรุป')),
+                                h('button', { 
+                                    onClick: () => setIsSettingsOpen(true), 
+                                    className: "flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg font-semibold text-sm transition-all" 
+                                }, h(Icon, { name: "settings", className: "w-4 h-4" }), 
+                                  h('span', { className: "hidden sm:inline" }, "ตั้งค่า"))
+                            )
+                        )
+                    )
+                ),
+
+                // Main content with sidebar
+                h('div', { className: "flex flex-1" },
+                    // Sidebar
+                    h('div', { className: "sidebar" },
+                        departments.sort((a,b) => a.order - b.order).map(dept => 
+                            h('div', {
+                                key: dept.id,
+                                className: `sidebar-tab ${selectedDepartmentId === dept.id ? 'active' : ''}`,
+                                onClick: () => setSelectedDepartmentId(dept.id),
+                                title: dept.name
+                            }, h(Icon, { name: dept.icon || 'folder', className: "w-5 h-5" }))
+                        ),
+                        h('div', {
+                            className: "sidebar-add",
+                            onClick: () => setIsDepartmentEditorOpen(true),
+                            title: "เพิ่ม/แก้ไขแท็บ"
+                        }, h(Icon, { name: "plus", className: "w-5 h-5" }))
+                    ),
+
+                    // Main content area
+                    h('div', { className: "flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8" },
+                        showSummary && h('div', { className: "grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" },
+                            // Original two cards
+                            h('div', { className: "bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center" },
+                                h('p', { className: "text-slate-400 text-xs font-bold uppercase tracking-wider mb-1" }, "ทรัพย์สินรวม"),
+                                h('div', { className: "flex items-baseline gap-2" },
+                                    h('h3', { className: "text-4xl font-black text-slate-800" }, totalItems),
+                                    h('span', { className: "text-sm text-slate-400 font-medium" }, "รายการ")
+                                ),
+                                h('div', { className: "flex gap-2 mt-3" },
+                                    ['total', 'month', 'year'].map(mode => {
+                                        const labels = { total: 'ทั้งหมด', month: 'เดือนนี้', year: 'ปีนี้' };
+                                        return h('button', {
+                                            key: mode,
+                                            onClick: () => setItemsViewMode(mode),
+                                            className: `px-3 py-1 text-xs font-bold rounded-full transition-all ${itemsViewMode === mode ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`,
+                                        }, labels[mode]);
+                                    })
+                                )
+                            ),
+                            h('div', { className: "bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center" },
+                                h('p', { className: "text-slate-400 text-xs font-bold uppercase tracking-wider mb-1" }, "มูลค่ารวม"),
+                                h('div', { className: "flex items-baseline gap-1" },
+                                    h('span', { className: "text-xl font-bold text-indigo-600" }, "฿"),
+                                    h('h3', { className: "text-4xl font-black text-indigo-600" }, totalValue.toLocaleString())
+                                ),
+                                h('div', { className: "flex gap-2 mt-3" },
+                                    ['total', 'month', 'year'].map(mode => {
+                                        const labels = { total: 'ทั้งหมด', month: 'เดือนนี้', year: 'ปีนี้' };
+                                        return h('button', {
+                                            key: mode,
+                                            onClick: () => setTotalViewMode(mode),
+                                            className: `px-3 py-1 text-xs font-bold rounded-full transition-all ${totalViewMode === mode ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`,
+                                        }, labels[mode]);
+                                    })
+                                )
+                            ),
+                            // New borrowing cards
+                            h('div', { 
+                                className: "bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center cursor-pointer hover:shadow-md transition-all",
+                                onClick: () => { setBorrowedItemsFilter('all'); setShowBorrowedItemsSlide(true); }
+                            },
+                                h('p', { className: "text-slate-400 text-xs font-bold uppercase tracking-wider mb-1" }, "กำลังถูกยืม"),
+                                h('div', { className: "flex items-baseline gap-2" },
+                                    h('h3', { className: "text-4xl font-black text-amber-600" }, currentlyBorrowed),
+                                    h('span', { className: "text-sm text-slate-400 font-medium" }, "รายการ")
+                                )
+                            ),
+                            h('div', { 
+                                className: "bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center cursor-pointer hover:shadow-md transition-all",
+                                onClick: () => { setBorrowedItemsFilter('overdue'); setShowBorrowedItemsSlide(true); }
+                            },
+                                h('p', { className: "text-slate-400 text-xs font-bold uppercase tracking-wider mb-1" }, "เกินกำหนดคืน"),
+                                h('div', { className: "flex items-baseline gap-2" },
+                                    h('h3', { className: "text-4xl font-black text-red-600" }, overdueBorrowed),
+                                    h('span', { className: "text-sm text-slate-400 font-medium" }, "รายการ")
+                                )
+                            )
+                        ),
+
+                        h('div', { className: "sticky-toolbar" },
+                            h('div', { className: "flex flex-col sm:flex-row justify-between items-center gap-4" },
+                                h('div', { className: "relative w-full sm:max-w-md flex items-center gap-2" },
+                                    h('div', { className: "relative flex-1" },
+                                        h(Icon, { name: "search", className: "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" }),
+                                        h('input', { 
+                                            className: "w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-sm", 
+                                            placeholder: "ค้นหารหัส, ชื่อ, หรือสถานที่...", 
+                                            value: searchTerm, 
+                                            onChange: e => setSearchTerm(e.target.value) 
+                                        })
+                                    ),
+                                    h('button', { 
+                                        onClick: () => {
+                                            if (isScanningSearch) {
+                                                stopScanner('search');
+                                            } else {
+                                                setIsScanningSearch(true);
+                                                setTimeout(() => startScanner('search', scannerSearchRef), 100);
+                                            }
+                                        },
+                                        className: `p-3 rounded-xl ${isScanningSearch ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'} hover:bg-slate-200 transition-all`,
+                                        title: "สแกนบาร์โค้ดเพื่อค้นหา"
+                                    }, h(Icon, { name: "scan-barcode", className: "w-5 h-5" }))
+                                ),
+                                h('div', { className: "action-button-group" },
+                                    h('button', { 
+                                        onClick: () => setShowCheckbox(!showCheckbox),
+                                        className: `action-icon-button ${showCheckbox ? 'active' : ''}`,
+                                        title: showCheckbox ? "ซ่อนช่องเลือก" : "แสดงช่องเลือก"
+                                    }, h(Icon, { name: "check-square", className: "w-5 h-5" })),
+                                    selectedIds.size > 0 && h('div', { className: "flex gap-2 mr-2" },
+                                        h('button', { 
+                                            onClick: downloadBarcodes, 
+                                            className: "action-icon-button bg-green-100 hover:bg-green-200 text-green-700",
+                                            title: "ดาวน์โหลดบาร์โค้ด"
+                                        }, h(Icon, { name: "download", className: "w-5 h-5" })),
+                                        h('button', { 
+                                            onClick: openBorrowForm,
+                                            className: "action-icon-button bg-blue-100 hover:bg-blue-200 text-blue-700",
+                                            title: "ยืม"
+                                        }, h(Icon, { name: "hand", className: "w-5 h-5" })),
+                                        h('button', { 
+                                            onClick: () => {
+                                                if (confirm(`ลบ ${selectedIds.size} รายการ?`)) {
+                                                    selectedIds.forEach(id => {
+                                                        setAssets(prev => prev.filter(a => a.id !== id));
+                                                        if (!isOnline) {
+                                                            addPending({ id }, 'delete');
+                                                        } else {
+                                                            fetch(scriptUrl, {
+                                                                method: 'POST', mode: 'no-cors',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ action: 'delete', data: { id } })
+                                                            }).catch(() => addPending({ id }, 'delete'));
+                                                        }
+                                                    });
+                                                    setSelectedIds(new Set());
+                                                }
+                                            }, 
+                                            className: "action-icon-button bg-red-100 hover:bg-red-200 text-red-700",
+                                            title: "ลบ"
+                                        }, h(Icon, { name: "trash-2", className: "w-4 h-4" })),
+                                        h('button', { 
+                                            onClick: () => setShowPrintModal(true), 
+                                            className: "action-icon-button bg-indigo-100 hover:bg-indigo-200 text-indigo-700",
+                                            title: "พิมพ์บาร์โค้ด"
+                                        }, h(Icon, { name: "printer", className: "w-4 h-4" }))
+                                    ),
+                                    h('button', { 
+                                        onClick: () => setShowSortModal(true), 
+                                        className: "action-icon-button",
+                                        title: "จัดเรียง"
+                                    }, h(Icon, { name: "arrow-up-down", className: "w-5 h-5" })),
+                                    h('button', { 
+                                        onClick: () => setShowColumnModal(true), 
+                                        className: "action-icon-button",
+                                        title: "จัดการคอลัมน์"
+                                    }, h(Icon, { name: "columns", className: "w-5 h-5" })),
+                                    h('button', { 
+                                        onClick: () => openForm(),
+                                        className: "action-icon-button bg-slate-900 text-white hover:bg-slate-800",
+                                        title: "เพิ่มครุภัณฑ์"
+                                    }, h(Icon, { name: "plus", className: "w-5 h-5" }))
+                                )
+                            )
+                        ),
+
+                        h('div', { className: `bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-4 ${showCheckbox ? 'checkbox-visible' : 'checkbox-hidden'}` },
+                            h('div', { className: "overflow-x-auto" },
+                                h('table', { className: "w-full text-left" },
+                                    h('thead', { className: "bg-slate-50 border-b border-slate-100" },
+                                        h('tr', null,
+                                            visibleColumns.map(col => {
+                                                if (col.key === 'checkbox') {
+                                                    return h('th', { key: col.key, className: `px-6 py-4 w-10 checkbox-col` },
+                                                        h('input', { type: "checkbox", checked: selectedIds.size === filteredAssets.length && filteredAssets.length > 0, onChange: selectAll })
+                                                    );
+                                                }
+                                                return h('th', { key: col.key, className: `px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider ${col.align || ''}` },
+                                                    col.label
+                                                );
+                                            })
+                                        )
+                                    ),
+                                    h('tbody', { className: "divide-y divide-slate-50" },
+                                        filteredAssets.length === 0 ? 
+                                            h('tr', null, h('td', { colSpan: visibleColumns.length, className: "px-6 py-12 text-center text-slate-400 text-sm" }, "ไม่พบข้อมูลครุภัณฑ์")) :
+                                            filteredAssets.map(item => h('tr', { key: item.id || item.code, className: "hover:bg-slate-50/50 transition-colors group" },
+                                                visibleColumns.map(col => {
+                                                    if (col.key === 'checkbox') {
+                                                        return h('td', { key: col.key, className: "px-6 py-4 checkbox-col" },
+                                                            h('input', { type: "checkbox", checked: selectedIds.has(item.id), onChange: () => toggleSelect(item.id) })
+                                                        );
+                                                    }
+                                                    if (col.key === 'code') {
+                                                        return h('td', { key: col.key, className: "px-6 py-4" },
+                                                            h('div', { className: "flex items-center gap-4" },
+                                                                h('div', { className: "flex flex-col" },
+                                                                    h('p', { className: "text-xs font-bold text-indigo-600 mb-0.5" }, item.code),
+                                                                    h('p', { className: "text-sm font-bold text-slate-700" }, item.name)
+                                                                )
+                                                            )
+                                                        );
+                                                    }
+                                                    if (col.key === 'category') {
+                                                        return h('td', { key: col.key, className: "px-6 py-4" },
+                                                            h('span', { className: "text-sm text-slate-600" }, item.category)
+                                                        );
+                                                    }
+                                                    if (col.key === 'location') {
+                                                        return h('td', { key: col.key, className: "px-6 py-4" },
+                                                            h('span', { className: "text-sm text-slate-600" }, item.location || '-')
+                                                        );
+                                                    }
+                                                    if (col.key === 'price') {
+                                                        return h('td', { key: col.key, className: "px-6 py-4 text-right" },
+                                                            h('span', { className: "text-sm font-bold text-slate-800" }, "฿", Number(item.price || 0).toLocaleString())
+                                                        );
+                                                    }
+                                                    if (col.key === 'actions') {
+                                                        return h('td', { key: col.key, className: "px-6 py-4 text-center" },
+                                                            h('button', { 
+                                                                onClick: () => openForm(item),
+                                                                className: "text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-indigo-50 transition-all" 
+                                                            }, h(Icon, { name: "edit-2", className: "w-4 h-4" }))
+                                                        );
+                                                    }
+                                                    return null;
+                                                })
+                                            ))
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // Personnel management slide-over
+                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isPersonnelOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isPersonnelOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsPersonnelOpen(false) }),
+                    h('div', { className: `absolute inset-y-0 right-0 max-w-full flex transition-transform duration-300 ${isPersonnelOpen ? 'translate-x-0' : 'translate-x-full'}` },
+                        h('div', { className: "w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, "บุคลากร"),
+                                h('button', { onClick: () => setIsPersonnelOpen(false), className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5" }))
+                            ),
+                            h('div', { className: "p-4 border-b flex justify-end" },
+                                h('button', { onClick: () => openPersonnelForm(), className: "bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm" }, h(Icon, { name: "plus", className: "w-4 h-4 inline mr-1" }), "เพิ่มบุคลากร")
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-4 custom-scroll" },
+                                h('table', { className: "w-full" },
+                                    h('thead', { className: "bg-slate-50" },
+                                        h('tr', null,
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "ชื่อ"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "สถานที่ทำงาน"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "จัดการ")
+                                        )
+                                    ),
+                                    h('tbody', null,
+                                        personnel.map(p => 
+                                            h('tr', { key: p.id, className: "border-b hover:bg-slate-50 cursor-pointer", onClick: () => setShowBorrowHistoryForPerson(p) },
+                                                h('td', { className: "px-4 py-3 flex items-center gap-2" },
+                                                    p.imageUrl ? 
+                                                        h('img', { src: p.imageUrl, className: "w-8 h-8 rounded-full object-cover" }) :
+                                                        h('div', { className: "profile-initial" }, (p.name || '?').charAt(0).toUpperCase()),
+                                                    h('span', { className: "font-medium" }, p.name)
+                                                ),
+                                                h('td', { className: "px-4 py-3" }, p.workplace || '-'),
+                                                h('td', { className: "px-4 py-3" },
+                                                    h('button', { onClick: (e) => { e.stopPropagation(); openPersonnelForm(p); }, className: "text-indigo-600 mr-2" }, h(Icon, { name: "edit-2", className: "w-4 h-4" })),
+                                                    h('button', { onClick: (e) => { e.stopPropagation(); deletePersonnel(p.id); }, className: "text-red-600" }, h(Icon, { name: "trash-2", className: "w-4 h-4" }))
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // Personnel form slide-over
+                h('div', { className: `fixed inset-0 z-[60] overflow-hidden ${isPersonnelFormOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isPersonnelFormOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsPersonnelFormOpen(false) }),
+                    h('div', { className: `absolute inset-y-0 right-0 max-w-full flex transition-transform duration-300 ${isPersonnelFormOpen ? 'translate-x-0' : 'translate-x-full'}` },
+                        h('div', { className: "w-screen max-w-md bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, currentPersonnel?.id ? "แก้ไขบุคลากร" : "เพิ่มบุคลากร"),
+                                h('button', { onClick: () => setIsPersonnelFormOpen(false), className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5" }))
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-6" },
+                                h('div', { className: "space-y-4" },
+                                    h('div', null,
+                                        h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1 block" }, "ชื่อ"),
+                                        h('input', { 
+                                            className: "w-full p-3 border rounded-xl text-sm", 
+                                            value: currentPersonnel?.name || '', 
+                                            onChange: e => setCurrentPersonnel({ ...currentPersonnel, name: e.target.value }) 
+                                        })
+                                    ),
+                                    h('div', null,
+                                        h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1 block" }, "ลิงค์รูปภาพ (ไม่บังคับ)"),
+                                        h('input', { 
+                                            className: "w-full p-3 border rounded-xl text-sm", 
+                                            value: currentPersonnel?.imageUrl || '', 
+                                            onChange: e => setCurrentPersonnel({ ...currentPersonnel, imageUrl: e.target.value }) 
+                                        })
+                                    ),
+                                    h('div', null,
+                                        h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1 block" }, "สถานที่ทำงาน"),
+                                        h('input', { 
+                                            className: "w-full p-3 border rounded-xl text-sm", 
+                                            value: currentPersonnel?.workplace || '', 
+                                            onChange: e => setCurrentPersonnel({ ...currentPersonnel, workplace: e.target.value }) 
+                                        })
+                                    )
+                                )
+                            ),
+                            h('div', { className: "p-6 border-t flex gap-3" },
+                                h('button', { onClick: () => setIsPersonnelFormOpen(false), className: "flex-1 bg-slate-200 py-3 rounded-xl font-bold" }, "ยกเลิก"),
+                                h('button', { onClick: savePersonnel, className: "flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold" }, "บันทึก")
+                            )
+                        )
+                    )
+                ),
+
+                // Borrow form slide-over with multi-select personnel and auto-calc
+                h('div', { className: `fixed inset-0 z-[60] overflow-hidden ${isBorrowFormOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isBorrowFormOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsBorrowFormOpen(false) }),
+                    h('div', { className: `absolute inset-y-0 right-0 max-w-full flex transition-transform duration-300 ${isBorrowFormOpen ? 'translate-x-0' : 'translate-x-full'}` },
+                        h('div', { className: "w-screen max-w-md bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, "ยืมครุภัณฑ์"),
+                                h('button', { onClick: () => setIsBorrowFormOpen(false), className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5" }))
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-6" },
+                                h('div', { className: "space-y-4" },
+                                    h('div', null,
+                                        h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1 block" }, "ผู้ยืม (เลือกได้หลายคน)"),
+                                        h('div', { className: "flex gap-2 mb-2" },
+                                            h('button', { 
+                                                onClick: () => { setIsPersonnelOpen(true); setIsBorrowFormOpen(false); }, 
+                                                className: "p-2 bg-indigo-100 text-indigo-600 rounded-xl text-sm flex items-center gap-1"
+                                            }, h(Icon, { name: "plus", className: "w-4 h-4" }), "เพิ่มบุคลากร")
+                                        ),
+                                        h('div', { className: "multi-select border rounded-xl p-2" },
+                                            personnel.map(p => 
+                                                h('label', { key: p.id, className: "flex items-center gap-2 p-1" },
+                                                    h('input', { 
+                                                        type: "checkbox", 
+                                                        value: p.id, 
+                                                        checked: borrowFormData.personnelIds.includes(p.id),
+                                                        onChange: (e) => {
+                                                            const checked = e.target.checked;
+                                                            setBorrowFormData(prev => ({
+                                                                ...prev,
+                                                                personnelIds: checked 
+                                                                    ? [...prev.personnelIds, p.id]
+                                                                    : prev.personnelIds.filter(id => id !== p.id)
+                                                            }));
+                                                        }
+                                                    }),
+                                                    p.imageUrl ? 
+                                                        h('img', { src: p.imageUrl, className: "w-6 h-6 rounded-full" }) :
+                                                        h('div', { className: "profile-initial w-6 h-6 text-xs" }, (p.name || '?').charAt(0).toUpperCase()),
+                                                    h('span', { className: "text-sm" }, p.name)
+                                                )
+                                            )
+                                        )
+                                    ),
+                                    h('div', null,
+                                        h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1 block" }, "วันที่ยืม"),
+                                        h('input', { type: "date", className: "w-full p-3 border rounded-xl text-sm", value: borrowFormData.borrowDate, onChange: e => setBorrowFormData({ ...borrowFormData, borrowDate: e.target.value }) })
+                                    ),
+                                    h('div', { className: "grid grid-cols-2 gap-2" },
+                                        h('div', null,
+                                            h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1 block" }, "วันที่จะคืน"),
+                                            h('input', { type: "date", className: "w-full p-3 border rounded-xl text-sm", value: borrowFormData.dueDate, onChange: e => setBorrowFormData({ ...borrowFormData, dueDate: e.target.value, duration: '' }) })
+                                        ),
+                                        h('div', null,
+                                            h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1 block" }, "ระยะเวลา (วัน)"),
+                                            h('input', { type: "number", min: "1", className: "w-full p-3 border rounded-xl text-sm", value: borrowFormData.duration, onChange: e => {
+                                                const val = e.target.value;
+                                                setBorrowFormData(prev => ({ ...prev, duration: val, dueDate: '' }));
+                                            } })
+                                        )
+                                    ),
+                                    h('div', null,
+                                        h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1 block" }, "หมายเหตุ"),
+                                        h('textarea', { className: "w-full p-3 border rounded-xl text-sm", rows: 3, value: borrowFormData.notes, onChange: e => setBorrowFormData({ ...borrowFormData, notes: e.target.value }) })
+                                    )
+                                )
+                            ),
+                            h('div', { className: "p-6 border-t" },
+                                h('button', { onClick: handleBorrowSubmit, className: "w-full bg-indigo-600 text-white py-3 rounded-xl font-bold" }, "บันทึกการยืม")
+                            )
+                        )
+                    )
+                ),
+
+                // Borrow history for a person with checkboxes and icon actions
+                showBorrowHistoryForPerson && h('div', { className: `fixed inset-0 z-history overflow-hidden pointer-events-auto` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm`, onClick: () => { setShowBorrowHistoryForPerson(null); setShowBorrowedItemsSlide(false); } }),
+                    h('div', { className: `absolute inset-y-0 right-0 max-w-full flex` },
+                        h('div', { className: "w-screen max-w-4xl bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, `ประวัติการยืม: ${showBorrowHistoryForPerson.name}`),
+                                h('div', { className: "flex gap-2" },
+                                    selectedBorrowIds.size > 0 && h('button', { 
+                                        onClick: () => {
+                                            selectedBorrowIds.forEach(id => returnBorrow(id));
+                                            setSelectedBorrowIds(new Set());
+                                        }, 
+                                        className: "bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1"
+                                    }, h(Icon, { name: "rotate-ccw", className: "w-4 h-4" }), "คืน"),
+                                    selectedBorrowIds.size > 0 && h('button', { 
+                                        onClick: () => {
+                                            const days = prompt("จำนวนวันที่ต้องการขยาย:", "1");
+                                            if (days && !isNaN(days)) {
+                                                selectedBorrowIds.forEach(id => extendBorrow(id, days));
+                                                setSelectedBorrowIds(new Set());
+                                            }
+                                        }, 
+                                        className: "bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1"
+                                    }, h(Icon, { name: "clock", className: "w-4 h-4" }), "ขยาย"),
+                                    h('button', { onClick: () => { setShowBorrowHistoryForPerson(null); setShowBorrowedItemsSlide(false); }, className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5" }))
+                                )
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-4" },
+                                h('table', { className: "w-full" },
+                                    h('thead', { className: "bg-slate-50" },
+                                        h('tr', null,
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, h('input', { type: "checkbox", onChange: (e) => {
+                                                const checked = e.target.checked;
+                                                const borrows = borrowings.filter(b => b.personnelIds && b.personnelIds.includes(showBorrowHistoryForPerson.id));
+                                                if (checked) {
+                                                    setSelectedBorrowIds(new Set(borrows.map(b => b.id)));
+                                                } else {
+                                                    setSelectedBorrowIds(new Set());
+                                                }
+                                            } })),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "ครุภัณฑ์"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "วันที่ยืม"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "กำหนดคืน"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "วันที่คืน"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "หมายเหตุ"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "จัดการ")
+                                        )
+                                    ),
+                                    h('tbody', null,
+                                        borrowings.filter(b => b.personnelIds && b.personnelIds.includes(showBorrowHistoryForPerson.id)).map(b => {
+                                            const asset = assets.find(a => a.id === b.assetId);
+                                            return h('tr', { key: b.id, className: "border-b" },
+                                                h('td', { className: "px-4 py-2" },
+                                                    h('input', { 
+                                                        type: "checkbox", 
+                                                        checked: selectedBorrowIds.has(b.id),
+                                                        onChange: (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSelectedBorrowIds(prev => {
+                                                                const newSet = new Set(prev);
+                                                                if (checked) newSet.add(b.id);
+                                                                else newSet.delete(b.id);
+                                                                return newSet;
+                                                            });
+                                                        }
+                                                    })
+                                                ),
+                                                h('td', { className: "px-4 py-2" }, asset ? `${asset.code} - ${asset.name}` : b.assetId),
+                                                h('td', { className: "px-4 py-2" }, b.borrowDate),
+                                                h('td', { className: "px-4 py-2" }, b.dueDate),
+                                                h('td', { className: "px-4 py-2" }, b.returnDate || '-'),
+                                                h('td', { className: "px-4 py-2" }, b.notes),
+                                                h('td', { className: "px-4 py-2" },
+                                                    !b.returnDate && h('div', { className: "flex gap-2" },
+                                                        h('button', { onClick: () => returnBorrow(b.id), className: "text-green-600", title: "คืน" }, h(Icon, { name: "rotate-ccw", className: "w-4 h-4" })),
+                                                        h('button', { onClick: () => {
+                                                            const days = prompt("จำนวนวันที่ต้องการขยาย:", "1");
+                                                            if (days && !isNaN(days)) extendBorrow(b.id, days);
+                                                        }, className: "text-blue-600", title: "ขยายเวลา" }, h(Icon, { name: "clock", className: "w-4 h-4" }))
+                                                    )
+                                                )
+                                            );
+                                        })
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // Borrowed items slide (from summary cards) with same table format
+                showBorrowedItemsSlide && h('div', { className: `fixed inset-0 z-borrowed overflow-hidden pointer-events-auto` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm`, onClick: () => setShowBorrowedItemsSlide(false) }),
+                    h('div', { className: `absolute inset-y-0 right-0 max-w-full flex` },
+                        h('div', { className: "w-screen max-w-4xl bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, borrowedItemsFilter === 'overdue' ? 'รายการเกินกำหนด' : 'รายการกำลังถูกยืม'),
+                                h('div', { className: "flex gap-2" },
+                                    selectedBorrowedIds.size > 0 && h('button', { 
+                                        onClick: () => {
+                                            selectedBorrowedIds.forEach(id => returnBorrow(id));
+                                            setSelectedBorrowedIds(new Set());
+                                        }, 
+                                        className: "bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1"
+                                    }, h(Icon, { name: "rotate-ccw", className: "w-4 h-4" }), "คืน"),
+                                    selectedBorrowedIds.size > 0 && h('button', { 
+                                        onClick: () => {
+                                            const days = prompt("จำนวนวันที่ต้องการขยาย:", "1");
+                                            if (days && !isNaN(days)) {
+                                                selectedBorrowedIds.forEach(id => extendBorrow(id, days));
+                                                setSelectedBorrowedIds(new Set());
+                                            }
+                                        }, 
+                                        className: "bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1"
+                                    }, h(Icon, { name: "clock", className: "w-4 h-4" }), "ขยาย"),
+                                    h('button', { onClick: () => setShowBorrowedItemsSlide(false), className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5" }))
+                                )
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-4" },
+                                h('table', { className: "w-full" },
+                                    h('thead', { className: "bg-slate-50" },
+                                        h('tr', null,
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, h('input', { type: "checkbox", onChange: (e) => {
+                                                const checked = e.target.checked;
+                                                const borrows = borrowings.filter(b => {
+                                                    if (b.returnDate) return false;
+                                                    if (borrowedItemsFilter === 'overdue') {
+                                                        return new Date(b.dueDate) < new Date();
+                                                    }
+                                                    return true;
+                                                });
+                                                if (checked) {
+                                                    setSelectedBorrowedIds(new Set(borrows.map(b => b.id)));
+                                                } else {
+                                                    setSelectedBorrowedIds(new Set());
+                                                }
+                                            } })),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "ครุภัณฑ์"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "ผู้ยืม"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "วันที่ยืม"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "กำหนดคืน"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "หมายเหตุ"),
+                                            h('th', { className: "px-4 py-2 text-left text-xs font-bold text-slate-400" }, "จัดการ")
+                                        )
+                                    ),
+                                    h('tbody', null,
+                                        borrowings.filter(b => {
+                                            if (b.returnDate) return false;
+                                            if (borrowedItemsFilter === 'overdue') {
+                                                return new Date(b.dueDate) < new Date();
+                                            }
+                                            return true;
+                                        }).map(b => {
+                                            const asset = assets.find(a => a.id === b.assetId);
+                                            const persons = (b.personnelIds || []).map(id => personnel.find(p => p.id === id)).filter(p => p);
+                                            return h('tr', { key: b.id, className: "border-b hover:bg-slate-50" },
+                                                h('td', { className: "px-4 py-2" },
+                                                    h('input', { 
+                                                        type: "checkbox", 
+                                                        checked: selectedBorrowedIds.has(b.id),
+                                                        onChange: (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSelectedBorrowedIds(prev => {
+                                                                const newSet = new Set(prev);
+                                                                if (checked) newSet.add(b.id);
+                                                                else newSet.delete(b.id);
+                                                                return newSet;
+                                                            });
+                                                        }
+                                                    })
+                                                ),
+                                                h('td', { className: "px-4 py-2 cursor-pointer", onClick: () => { setShowBorrowHistoryForPerson(persons[0]); setShowBorrowedItemsSlide(false); } }, asset ? `${asset.code} - ${asset.name}` : b.assetId),
+                                                h('td', { className: "px-4 py-2 flex items-center gap-2 cursor-pointer", onClick: () => { setShowBorrowHistoryForPerson(persons[0]); setShowBorrowedItemsSlide(false); } },
+                                                    persons.length > 0 ? persons.map(p => 
+                                                        p.imageUrl ? 
+                                                            h('img', { key: p.id, src: p.imageUrl, className: "w-6 h-6 rounded-full -ml-1 first:ml-0" }) :
+                                                            h('div', { key: p.id, className: "profile-initial w-6 h-6 text-xs -ml-1 first:ml-0" }, p.name?.charAt(0).toUpperCase() || '?')
+                                                    ) : 'ไม่พบ'
+                                                ),
+                                                h('td', { className: "px-4 py-2" }, b.borrowDate),
+                                                h('td', { className: "px-4 py-2" }, b.dueDate),
+                                                h('td', { className: "px-4 py-2" }, b.notes),
+                                                h('td', { className: "px-4 py-2" },
+                                                    h('div', { className: "flex gap-2" },
+                                                        h('button', { onClick: () => returnBorrow(b.id), className: "text-green-600", title: "คืน" }, h(Icon, { name: "rotate-ccw", className: "w-4 h-4" })),
+                                                        h('button', { onClick: () => {
+                                                            const days = prompt("จำนวนวันที่ต้องการขยาย:", "1");
+                                                            if (days && !isNaN(days)) extendBorrow(b.id, days);
+                                                        }, className: "text-blue-600", title: "ขยายเวลา" }, h(Icon, { name: "clock", className: "w-4 h-4" }))
+                                                    )
+                                                )
+                                            );
+                                        })
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // Department editor slide-over with link to lucide.dev
+                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isDepartmentEditorOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isDepartmentEditorOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsDepartmentEditorOpen(false) }),
+                    h('div', { className: `absolute inset-y-0 left-0 max-w-full flex transition-transform duration-300 ${isDepartmentEditorOpen ? 'translate-x-0' : '-translate-x-full'}` },
+                        h('div', { className: "w-screen max-w-sm bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, "จัดการแท็บ"),
+                                h('div', { className: "flex gap-2" },
+                                    h('a', { href: "https://lucide.dev/icons/", target: "_blank", className: "text-indigo-600 hover:text-indigo-800 p-2 rounded-lg hover:bg-indigo-50", title: "ดูไอคอน" }, h(Icon, { name: "external-link", className: "w-5 h-5" })),
+                                    h('button', { onClick: () => setIsDepartmentEditorOpen(false), className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5" }))
+                                )
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-4 custom-scroll" },
+                                departments.filter(d => d.id !== 'all').sort((a,b) => a.order - b.order).map(dept => 
+                                    h('div', { key: dept.id, className: "flex items-center gap-2 mb-2 p-2 bg-slate-50 rounded-lg" },
+                                        h('input', { 
+                                            className: "flex-1 p-2 border rounded-lg text-sm", 
+                                            value: dept.name, 
+                                            onChange: e => updateDepartment(dept.id, 'name', e.target.value) 
+                                        }),
+                                        h('input', { 
+                                            className: "w-24 p-2 border rounded-lg text-sm", 
+                                            placeholder: "icon name", 
+                                            value: dept.icon || '', 
+                                            onChange: e => updateDepartment(dept.id, 'icon', e.target.value) 
+                                        }),
+                                        h('button', { onClick: () => deleteDepartment(dept.id), className: "text-red-400 hover:text-red-600" }, h(Icon, { name: "trash-2", className: "w-4 h-4" }))
+                                    )
+                                ),
+                                h('div', { className: "mt-4 flex gap-2" },
+                                    h('input', { id: "newDeptName", className: "flex-1 p-2 border rounded-lg text-sm", placeholder: "ชื่อแท็บ" }),
+                                    h('input', { id: "newDeptIcon", className: "w-24 p-2 border rounded-lg text-sm", placeholder: "icon" }),
+                                    h('button', { 
+                                        onClick: () => {
+                                            const name = document.getElementById('newDeptName').value;
+                                            const icon = document.getElementById('newDeptIcon').value;
+                                            if (name.trim()) {
+                                                addDepartment(name.trim(), icon.trim());
+                                                document.getElementById('newDeptName').value = '';
+                                                document.getElementById('newDeptIcon').value = '';
+                                            }
+                                        }, 
+                                        className: "bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold" 
+                                    }, "เพิ่ม")
+                                )
+                            ),
+                            h('div', { className: "p-4 border-t" },
+                                h('button', { onClick: () => setIsDepartmentEditorOpen(false), className: "w-full bg-slate-200 py-2 rounded-lg font-bold" }, "ปิด")
+                            )
+                        )
+                    )
+                ),
+
+                // Original Sort Modal
+                showSortModal && h('div', { className: "fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50" },
+                    h('div', { className: "bg-white rounded-2xl max-w-md w-full p-6" },
+                        h('h3', { className: "text-lg font-bold mb-4" }, "จัดเรียงข้อมูล"),
+                        h('div', { className: "space-y-4" },
+                            sortRules.map((rule, index) => h('div', { key: index, className: "flex items-center gap-2" },
+                                h('span', { className: "text-sm" }, `${SORT_COLUMNS.find(c => c.value === rule.col)?.label} (${rule.dir === 'asc' ? 'น้อยไปมาก' : 'มากไปน้อย'})`),
+                                h('button', { onClick: () => removeSortRule(index), className: "text-red-500" }, h(Icon, { name: "x", className: "w-4 h-4" }))
+                            )),
+                            h('div', { className: "flex gap-2" },
+                                h('select', { id: "sortCol", className: "flex-1 p-2 border rounded-lg" },
+                                    SORT_COLUMNS.map(c => h('option', { key: c.value, value: c.value }, c.label))
+                                ),
+                                h('select', { id: "sortDir", className: "w-24 p-2 border rounded-lg" },
+                                    h('option', { value: "asc" }, "น้อยไปมาก"),
+                                    h('option', { value: "desc" }, "มากไปน้อย")
+                                ),
+                                h('button', { 
+                                    onClick: () => {
+                                        const col = document.getElementById('sortCol').value;
+                                        const dir = document.getElementById('sortDir').value;
+                                        addSortRule(col, dir);
+                                    }, 
+                                    className: "bg-indigo-600 text-white px-4 py-2 rounded-lg" 
+                                }, "เพิ่ม")
+                            )
+                        ),
+                        h('div', { className: "flex gap-2 mt-6" },
+                            h('button', { onClick: () => setShowSortModal(false), className: "flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold" }, "ตกลง"),
+                            h('button', { onClick: () => { setSortRules([]); setShowSortModal(false); }, className: "flex-1 bg-slate-200 py-2 rounded-lg font-bold" }, "ล้างทั้งหมด")
+                        )
+                    )
+                ),
+
+                // Original Column Modal
+                showColumnModal && h('div', { className: "fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50" },
+                    h('div', { className: "bg-white rounded-2xl max-w-md w-full p-6" },
+                        h('h3', { className: "text-lg font-bold mb-4" }, "เลือกคอลัมน์ที่ต้องการแสดง"),
+                        h('div', { className: "space-y-2" },
+                            ALL_COLUMNS.filter(c => !c.always).map(col => 
+                                h('div', { key: col.key, className: "flex items-center gap-2" },
+                                    h('input', { 
+                                        type: "checkbox", 
+                                        id: `col-${col.key}`, 
+                                        checked: !hiddenColumns.includes(col.key), 
+                                        onChange: () => toggleColumn(col.key) 
+                                    }),
+                                    h('label', { htmlFor: `col-${col.key}`, className: "text-sm" }, col.label)
+                                )
+                            )
+                        ),
+                        h('div', { className: "flex gap-2 mt-6" },
+                            h('button', { onClick: () => setShowColumnModal(false), className: "flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold" }, "ปิด")
+                        )
+                    )
+                ),
+
+                // Original Form Slide-over with barcode always visible
+                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isFormOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isFormOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsFormOpen(false) }),
+                    h('div', { className: `absolute inset-0 flex items-end justify-center transition-transform duration-300 ${isFormOpen ? 'translate-y-0' : 'translate-y-full'}` },
+                        h('div', { className: "w-full max-w-4xl bg-white shadow-2xl flex flex-col h-[90vh] rounded-t-2xl overflow-hidden" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, formData.id ? "แก้ไขข้อมูล" : "เพิ่มครุภัณฑ์ใหม่"),
+                                h('button', { onClick: () => setIsFormOpen(false), className: "p-2 hover:bg-slate-50 rounded-full transition-colors" }, h(Icon, { name: "x", className: "w-5 h-5 text-slate-400" }))
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-6 custom-scroll bg-slate-50/50" },
+                                h('form', { onSubmit: handleSubmit, className: "space-y-6" },
+                                    h('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-4" },
+                                        h('div', { className: "md:col-span-2" },
+                                            h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "ชื่อรายการ"),
+                                            h('input', { required: true, className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500", value: formData.name, onChange: e => setFormData({...formData, name: e.target.value}) })
+                                        ),
+
+                                        h('div', null,
+                                            h('div', { className: "flex justify-between items-center mb-1.5" },
+                                                h('label', { className: "text-xs font-bold text-slate-500 uppercase" }, "หมวดหมู่"),
+                                                h('button', { type: "button", onClick: () => openConfigEditor('categories'), className: "text-indigo-500 hover:text-indigo-700" }, h(Icon, { name: "pencil", className: "w-4 h-4" }))
+                                            ),
+                                            h('select', { 
+                                                className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500",
+                                                value: formData.category,
+                                                onChange: e => setFormData({...formData, category: e.target.value, id: '', code: ''}) 
+                                            }, categories.sort((a,b) => a.order - b.order).map(c => h('option', { key: c.id, value: c.name }, c.name)))
+                                        ),
+
+                                        h('div', { className: "relative", ref: locationDropdownRef },
+                                            h('div', { className: "flex justify-between items-center mb-1.5" },
+                                                h('label', { className: "text-xs font-bold text-slate-500 uppercase" }, "สถานที่เก็บ"),
+                                                h('button', { type: "button", onClick: () => openConfigEditor('locations'), className: "text-indigo-500 hover:text-indigo-700" }, h(Icon, { name: "pencil", className: "w-4 h-4" }))
+                                            ),
+                                            h('div', { className: "flex gap-2" },
+                                                h('input', { 
+                                                    className: "flex-1 p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500", 
+                                                    value: formData.location, 
+                                                    onChange: e => setFormData({...formData, location: e.target.value}),
+                                                    placeholder: "พิมพ์หรือเลือกสถานที่"
+                                                }),
+                                                h('button', { 
+                                                    type: "button", 
+                                                    onClick: () => setShowLocationDropdown(!showLocationDropdown),
+                                                    className: "p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
+                                                }, h(Icon, { name: "chevrons-down", className: "w-5 h-5" }))
+                                            ),
+                                            showLocationDropdown && h('div', { className: "location-dropdown" },
+                                                locations.sort((a,b) => a.order - b.order).map(loc => 
+                                                    h('div', { 
+                                                        key: loc.id, 
+                                                        className: "location-dropdown-item",
+                                                        onClick: () => {
+                                                            setFormData(prev => ({ ...prev, location: loc.name }));
+                                                            setShowLocationDropdown(false);
+                                                        }
+                                                    }, loc.name)
+                                                )
+                                            )
+                                        ),
+
+                                        h('div', null,
+                                            h('div', { className: "flex justify-between items-center mb-1.5" },
+                                                h('label', { className: "text-xs font-bold text-slate-500 uppercase" }, "สถานะ"),
+                                                h('button', { type: "button", onClick: () => openConfigEditor('statuses'), className: "text-indigo-500 hover:text-indigo-700" }, h(Icon, { name: "pencil", className: "w-4 h-4" }))
+                                            ),
+                                            h('select', { 
+                                                className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500",
+                                                value: formData.status,
+                                                onChange: e => setFormData({...formData, status: e.target.value}) 
+                                            }, statuses.sort((a,b) => a.order - b.order).map(s => h('option', { key: s.id, value: s.name }, s.name)))
+                                        ),
+
+                                        h('div', { className: "md:col-span-2" },
+                                            h('div', { className: "flex items-center gap-2" },
+                                                h('div', { className: "flex-1" },
+                                                    h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "รหัสทรัพย์สิน"),
+                                                    h('input', { 
+                                                        className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-mono font-bold text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-500", 
+                                                        value: formData.code, 
+                                                        onChange: e => setFormData({...formData, code: e.target.value}) 
+                                                    })
+                                                ),
+                                                h('div', { className: "flex items-center gap-2 mt-6" },
+                                                    h('label', { className: "text-xs font-bold text-slate-500 uppercase mr-2" }, "บาร์โค้ด"),
+                                                    h(Toggle, { checked: showBarcodeInput, onChange: setShowBarcodeInput })
+                                                )
+                                            ),
+                                            // Always show barcode image if code and name are filled
+                                            (formData.code && formData.name && barcodeDataURL) && h('div', { className: "mt-4 p-4 bg-white border rounded-lg flex justify-between items-center" },
+                                                h('img', { src: barcodeDataURL, className: "h-20 object-contain" }),
+                                                h('button', { onClick: downloadBarcode, className: "flex items-center gap-1 bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold hover:bg-indigo-200" }, h(Icon, { name: "download", className: "w-4 h-4" }), "ดาวน์โหลด")
+                                            )
+                                        ),
+
+                                        showBarcodeInput && h('div', { className: "md:col-span-2" },
+                                            h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "บาร์โค้ดสินค้า (สแกน)"),
+                                            h('div', { className: "flex gap-2" },
+                                                h('input', { 
+                                                    className: "flex-1 p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500", 
+                                                    value: formData.barcode, 
+                                                    onChange: e => setFormData({...formData, barcode: e.target.value}) 
+                                                }),
+                                                h('button', { 
+                                                    type: "button", 
+                                                    onClick: () => {
+                                                        if (isScanningForm) {
+                                                            stopScanner('form');
+                                                        } else {
+                                                            setIsScanningForm(true);
+                                                            setTimeout(() => startScanner('form', scannerFormRef), 100);
+                                                        }
+                                                    }, 
+                                                    className: `px-4 rounded-xl ${isScanningForm ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'} hover:bg-slate-200 flex items-center justify-center`
+                                                }, h(Icon, { name: "scan-barcode", className: "w-5 h-5" }))
+                                            )
+                                        ),
+
+                                        h('div', null,
+                                            h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "ราคา"),
+                                            h('input', { type: "number", className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500", value: formData.price, onChange: e => setFormData({...formData, price: e.target.value}) })
+                                        ),
+
+                                        h('div', null,
+                                            h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "วันที่"),
+                                            h('input', { type: "date", className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500", value: formData.date, onChange: e => setFormData({...formData, date: e.target.value}) })
+                                        ),
+
+                                        h('div', { className: "md:col-span-2 flex items-center gap-3" },
+                                            h('label', { className: "text-xs font-bold text-slate-500 uppercase" }, "มีประกัน"),
+                                            h(Toggle, { checked: formData.hasWarranty, onChange: (val) => setFormData({...formData, hasWarranty: val}) })
+                                        ),
+
+                                        formData.hasWarranty && h('div', { className: "md:col-span-2 space-y-4 pl-6 border-l-2 border-indigo-200" },
+                                            h('div', { className: "grid grid-cols-1 md:grid-cols-3 gap-4" },
+                                                h('div', null,
+                                                    h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "ปี"),
+                                                    h('input', { type: "number", min: "0", className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm", value: formData.warrantyYears, onChange: e => {
+                                                        const val = e.target.value;
+                                                        setFormData(prev => ({ ...prev, warrantyYears: val, warrantyEnd: '' }));
+                                                    } })
+                                                ),
+                                                h('div', null,
+                                                    h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "เดือน"),
+                                                    h('input', { type: "number", min: "0", max: "11", className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm", value: formData.warrantyMonths, onChange: e => {
+                                                        const val = e.target.value;
+                                                        setFormData(prev => ({ ...prev, warrantyMonths: val, warrantyEnd: '' }));
+                                                    } })
+                                                ),
+                                                h('div', null,
+                                                    h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "วัน"),
+                                                    h('input', { type: "number", min: "0", max: "30", className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm", value: formData.warrantyDays, onChange: e => {
+                                                        const val = e.target.value;
+                                                        setFormData(prev => ({ ...prev, warrantyDays: val, warrantyEnd: '' }));
+                                                    } })
+                                                )
+                                            ),
+                                            h('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-4" },
+                                                h('div', null,
+                                                    h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "วันเริ่ม"),
+                                                    h('input', { type: "date", className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm", value: formData.warrantyStart, onChange: e => setFormData({...formData, warrantyStart: e.target.value}) })
+                                                ),
+                                                h('div', null,
+                                                    h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "วันหมด"),
+                                                    h('input', { type: "date", className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm", value: formData.warrantyEnd, onChange: e => {
+                                                        const val = e.target.value;
+                                                        setFormData(prev => ({ ...prev, warrantyEnd: val, warrantyYears: '', warrantyMonths: '', warrantyDays: '' }));
+                                                    } })
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            ),
+                            h('div', { className: "p-6 border-t border-slate-100 bg-white flex gap-3" },
+                                formData.id ? (
+                                    h('button', { 
+                                        onClick: () => handleDelete(formData.id),
+                                        className: "flex-1 bg-red-500 hover:bg-red-600 text-white py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                                    }, h(Icon, { name: "trash-2", className: "w-5 h-5" }), "ลบ")
+                                ) : (
+                                    h('button', { 
+                                        onClick: () => setIsFormOpen(false),
+                                        className: "flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                                    }, h(Icon, { name: "x", className: "w-5 h-5" }), "ยกเลิก")
+                                ),
+                                h('button', { 
+                                    onClick: handleSubmit, 
+                                    disabled: loading, 
+                                    className: `flex-1 py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${loading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800'}` 
+                                }, loading ? h(Icon, { name: "loader", className: "animate-spin" }) : h(Icon, { name: "save", className: "w-5 h-5" }), loading ? "กำลังบันทึก..." : "บันทึกข้อมูล")
+                            )
+                        )
+                    )
+                ),
+
+                // Original Scanner overlays
+                isScanningForm && h('div', { className: "fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center p-6" },
+                    h('div', { className: "w-full max-w-sm rounded-2xl overflow-hidden bg-white relative" }, h('div', { id: "reader" })),
+                    h('button', { onClick: () => stopScanner('form'), className: "mt-8 bg-white/20 text-white px-8 py-3 rounded-full font-bold backdrop-blur-md" }, "ยกเลิก")
+                ),
+
+                isScanningSearch && h('div', { className: "fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center p-6" },
+                    h('div', { className: "w-full max-w-sm rounded-2xl overflow-hidden bg-white relative" }, h('div', { id: "reader" })),
+                    h('button', { onClick: () => stopScanner('search'), className: "mt-8 bg-white/20 text-white px-8 py-3 rounded-full font-bold backdrop-blur-md" }, "ยกเลิก")
+                ),
+
+                // Original Config Editor
+                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isConfigOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isConfigOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsConfigOpen(false) }),
+                    h('div', { className: `absolute inset-y-0 left-0 max-w-full flex transition-transform duration-300 ${isConfigOpen ? 'translate-x-0' : '-translate-x-full'}` },
+                        h('div', { className: "w-screen max-w-sm bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-4 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-lg font-black text-slate-800" }, "จัดการ Dropdown"),
+                                h('div', { className: "flex gap-2" },
+                                    h('button', { 
+                                        onClick: resetConfig,
+                                        className: "text-indigo-600 hover:text-indigo-800 p-2 rounded-lg hover:bg-indigo-50",
+                                        title: "คืนค่าเริ่มต้น"
+                                    }, h(Icon, { name: "rotate-ccw", className: "w-5 h-5" })),
+                                    h('button', { 
+                                        onClick: importFromBackup,
+                                        className: "text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50",
+                                        title: "นำเข้าข้อมูลจาก Backup"
+                                    }, h(Icon, { name: "download", className: "w-5 h-5" })),
+                                    h('button', { 
+                                        onClick: saveConfigToSheet,
+                                        className: "text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50",
+                                        title: "ส่งออกข้อมูล"
+                                    }, h(Icon, { name: "upload", className: "w-5 h-5" })),
+                                    h('button', { onClick: () => setIsConfigOpen(false), className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5" }))
+                                )
+                            ),
+                            h('div', { className: "flex gap-2 p-4 border-b" },
+                                h('button', { 
+                                    onClick: () => setConfigType('categories'),
+                                    className: `tab-button ${configType === 'categories' ? 'active' : ''}`
+                                }, "หมวดหมู่"),
+                                h('button', { 
+                                    onClick: () => setConfigType('locations'),
+                                    className: `tab-button ${configType === 'locations' ? 'active' : ''}`
+                                }, "สถานที่"),
+                                h('button', { 
+                                    onClick: () => setConfigType('statuses'),
+                                    className: `tab-button ${configType === 'statuses' ? 'active' : ''}`
+                                }, "สถานะ")
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-4 custom-scroll" },
+                                (configType === 'categories' ? categories : configType === 'locations' ? locations : statuses)
+                                    .sort((a,b) => a.order - b.order)
+                                    .map(item => {
+                                        const isDragging = draggedItemId === item.id;
+                                        return h('div', { 
+                                            key: item.id, 
+                                            className: `flex items-center gap-2 mb-2 p-2 rounded-lg transition-colors ${isDragging ? 'bg-blue-100 dragging' : 'bg-slate-50'}`,
+                                            draggable: true,
+                                            onDragStart: (e) => handleDragStart(e, item.id),
+                                            onDragOver: handleDragOver,
+                                            onDrop: (e) => handleDrop(e, item.id, configType),
+                                            onDragEnd: handleDragEnd
+                                        },
+                                            h('div', { className: "drag-handle text-slate-400 hover:text-indigo-600 cursor-grab" }, h(Icon, { name: "grip-vertical", className: "w-4 h-4" })),
+                                            h('button', { onClick: () => moveConfigItem(configType, item.id, 'up'), className: "text-slate-400 hover:text-indigo-600" }, h(Icon, { name: "chevron-up", className: "w-4 h-4" })),
+                                            h('button', { onClick: () => moveConfigItem(configType, item.id, 'down'), className: "text-slate-400 hover:text-indigo-600" }, h(Icon, { name: "chevron-down", className: "w-4 h-4" })),
+                                            configType === 'categories' && h('input', { 
+                                                className: "w-16 p-1 border rounded text-sm", 
+                                                placeholder: "Prefix",
+                                                value: item.prefix || 'X',
+                                                onChange: (e) => updateConfigItem(configType, item.id, 'prefix', e.target.value.toUpperCase())
+                                            }),
+                                            h('input', { 
+                                                className: "flex-1 p-2 border rounded-lg text-sm", 
+                                                value: item.name, 
+                                                onChange: (e) => updateConfigItem(configType, item.id, 'name', e.target.value) 
+                                            }),
+                                            h('button', { onClick: () => deleteConfigItem(configType, item.id), className: "text-red-400 hover:text-red-600" }, h(Icon, { name: "trash-2", className: "w-4 h-4" }))
+                                        );
+                                    }),
+                                h('div', { className: "mt-4 flex gap-2" },
+                                    h('input', { id: "newItemName", className: "flex-1 p-2 border rounded-lg text-sm", placeholder: "เพิ่มรายการ..." }),
+                                    h('button', { 
+                                        onClick: () => {
+                                            const input = document.getElementById('newItemName');
+                                            if (input.value.trim()) {
+                                                addConfigItem(configType, input.value.trim());
+                                                input.value = '';
+                                            }
+                                        }, 
+                                        className: "bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold" 
+                                    }, "เพิ่ม")
+                                )
+                            ),
+                            h('div', { className: "p-4 border-t" },
+                                h('button', { onClick: () => setIsConfigOpen(false), className: "w-full bg-slate-200 py-2 rounded-lg font-bold" }, "ปิด")
+                            )
+                        )
+                    )
+                ),
+
+                // Original Settings
+                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isSettingsOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                    h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isSettingsOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsSettingsOpen(false) }),
+                    h('div', { className: `absolute inset-y-0 left-0 max-w-full flex transition-transform duration-300 ${isSettingsOpen ? 'translate-x-0' : '-translate-x-full'}` },
+                        h('div', { className: "w-screen max-w-sm bg-white shadow-2xl flex flex-col h-full" },
+                            h('div', { className: "px-6 py-6 border-b border-slate-100 flex justify-between items-center" },
+                                h('h2', { className: "text-xl font-black text-slate-800 flex items-center gap-2" }, h(Icon, { name: "settings", className: "w-6 h-6 text-indigo-600" }), "ตั้งค่าระบบ"),
+                                h('button', { onClick: () => setIsSettingsOpen(false), className: "p-2 hover:bg-slate-50 rounded-full" }, h(Icon, { name: "x", className: "w-5 h-5 text-slate-400" }))
+                            ),
+                            h('div', { className: "flex-1 overflow-y-auto p-6 custom-scroll" },
+                                h('div', { className: "space-y-6" },
+                                    h('div', { className: "flex items-center gap-2" },
+                                        h('label', { className: "text-xs font-bold text-slate-400 uppercase mb-2 block flex-1" }, "Google Web App URL"),
+                                        h('button', { 
+                                            onClick: () => { fetchData(); fetchConfig(); },
+                                            className: "bg-slate-200 hover:bg-slate-300 p-2 rounded-lg transition-colors",
+                                            title: "รีเฟรชข้อมูล"
+                                        }, h(Icon, { name: "refresh-cw", className: "w-5 h-5 text-slate-600" }))
+                                    ),
+                                    h('div', { className: "flex items-center gap-2" },
+                                        h('input', { 
+                                            className: "flex-1 p-4 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500", 
+                                            value: scriptUrl, 
+                                            onChange: e => setScriptUrl(e.target.value), 
+                                            placeholder: "https://script.google.com/..." 
+                                        }),
+                                    ),
+                                    h('button', { 
+                                        onClick: () => { localStorage.setItem('mt_script_url', scriptUrl); setIsSettingsOpen(false); fetchAllData(); fetchConfig(); }, 
+                                        className: "w-full mt-3 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm shadow-indigo-100 shadow-lg" 
+                                    }, "บันทึกและเชื่อมต่อ"),
+                                    h('button', { 
+                                        onClick: () => setShowInstructions(true), 
+                                        className: "w-full mt-3 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold text-sm border border-slate-200 flex items-center justify-center gap-2"
+                                    }, h(Icon, { name: "help-circle", className: "w-4 h-4" }), 
+                                      h('span', { className: "hidden sm:inline" }, "ดูวิธีรับลิงก์ GAS")),
+                                    h('div', { className: "bg-slate-50 p-4 rounded-2xl border border-slate-100" },
+                                        h('h4', { className: "font-bold text-sm text-slate-700 mb-2 flex items-center gap-2" }, h(Icon, { name: "code", className: "w-4 h-4" }), "สำหรับผู้ดูแลระบบ"),
+                                        h('p', { className: "text-xs text-slate-500 mb-4 leading-relaxed" }, "คัดลอกโค้ดด้านล่างไปวางใน Apps Script (รองรับการลบและ backup)"),
+                                        h('button', { 
+                                            onClick: () => { navigator.clipboard.writeText(GAS_CODE_TEMPLATE); setCopied(true); setTimeout(() => setCopied(false), 2000); }, 
+                                            className: `w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all border ${copied ? 'bg-green-50 text-green-600 border-green-200' : 'bg-white text-slate-600 border-slate-200'}` 
+                                        }, h(Icon, { name: copied ? "check" : "copy", className: "w-3.5 h-3.5" }), 
+                                          h('span', { className: "hidden sm:inline" }, copied ? "คัดลอกเรียบร้อย" : "คัดลอก Code"))
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // Original Instructions
+                showInstructions && h('div', { className: "fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50" },
+                    h('div', { className: "bg-white rounded-2xl max-w-md w-full p-6" },
+                        h('h3', { className: "text-lg font-bold mb-4" }, "วิธีรับลิงก์ GAS"),
+                        h('ol', { className: "list-decimal list-inside space-y-2 text-sm text-slate-600" },
+                            h('li', null, "เปิด Google Sheet ที่ต้องการใช้เป็นฐานข้อมูล"),
+                            h('li', null, "ไปที่ส่วนขยาย (Extensions) > Apps Script"),
+                            h('li', null, "วางโค้ดที่คัดลอกจาก 'คัดลอก Code' ลงในไฟล์ Code.gs"),
+                            h('li', null, "บันทึก (กด Save) และกด Deploy > New deployment"),
+                            h('li', null, "เลือก Type เป็น Web App, ตั้งค่า Execute as เป็น 'Me', Who has access เป็น 'Anyone'"),
+                            h('li', null, "กด Deploy และคัดลอก URL ที่ได้มาใส่ในช่องด้านบน")
+                        ),
+                        h('button', { onClick: () => setShowInstructions(false), className: "mt-6 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold" }, "ปิด")
+                    )
+                ),
+
+                // Original Print Modal
+                showPrintModal && h('div', { className: "fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50" },
+                    h('div', { className: "bg-white rounded-2xl max-w-md w-full p-6" },
+                        h('h3', { className: "text-lg font-bold mb-4" }, "พิมพ์บาร์โค้ด"),
+                        h('div', { className: "space-y-4" },
+                            h('div', null,
+                                h('label', { className: "block text-sm font-medium mb-1" }, "ขนาดบาร์โค้ด"),
+                                h('select', { value: printSize, onChange: e => setPrintSize(e.target.value), className: "w-full p-2 border rounded-lg" },
+                                    h('option', { value: "S" }, "เล็ก (S)"),
+                                    h('option', { value: "M" }, "กลาง (M)"),
+                                    h('option', { value: "L" }, "ใหญ่ (L)")
+                                )
+                            ),
+                            h('div', null,
+                                h('label', { className: "block text-sm font-medium mb-1" }, "ขนาดกระดาษ"),
+                                h('select', { value: printPaper, onChange: e => setPrintPaper(e.target.value), className: "w-full p-2 border rounded-lg" },
+                                    h('option', { value: "A4" }, "A4"),
+                                    h('option', { value: "A5" }, "A5"),
+                                    h('option', { value: "Letter" }, "Letter")
+                                )
+                            )
+                        ),
+                        h('div', { className: "flex gap-2 mt-6" },
+                            h('button', { onClick: printBarcodes, className: "flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold" }, "พิมพ์"),
+                            h('button', { onClick: () => setShowPrintModal(false), className: "flex-1 bg-slate-200 py-2 rounded-lg font-bold" }, "ยกเลิก")
+                        )
+                    )
+                )
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(h(App));
+    </script>
+</body>
+</html>
