@@ -800,14 +800,18 @@ function doGet(e) {
     var statuses = [];
     
     rows.forEach(function(row) {
-      var type = row[0];
+      var type = (row[0] || '').toString().trim();
       var id = row[1];
       var name = row[2];
       var prefix = row[3];
       var order = row[4];
-      var item = { id: id, name: name, order: order };
+      
+      // Skip empty rows
+      if (!id || !name) return;
+      
+      var item = { id: id, name: name, order: Number(order) || 0 };
       if (type === 'category') {
-        item.prefix = prefix;
+        item.prefix = prefix || 'X';
         categories.push(item);
       } else if (type === 'location') {
         locations.push(item);
@@ -817,9 +821,9 @@ function doGet(e) {
     });
     
     var config = {
-      categories: categories,
-      locations: locations,
-      statuses: statuses
+      categories: categories.length > 0 ? categories : [],
+      locations: locations.length > 0 ? locations : [],
+      statuses: statuses.length > 0 ? statuses : []
     };
     return ContentService.createTextOutput(JSON.stringify(config)).setMimeType(prop);
   }
@@ -1201,6 +1205,18 @@ function doGet(e) {
                             data: { categories, locations, statuses } 
                         })
                     });
+                    // Reload config from sheet after saving to ensure consistency
+                    setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${scriptUrl}?action=readConfig`);
+                            const config = await response.json();
+                            if (config.categories) setCategories(config.categories);
+                            if (config.locations) setLocations(config.locations);
+                            if (config.statuses) setStatuses(config.statuses);
+                        } catch (e) {
+                            console.warn('Failed to reload config after save');
+                        }
+                    }, 500);
                 } catch (e) {}
             };
 
@@ -1752,12 +1768,23 @@ function doGet(e) {
                 e.target.classList.remove('dragging');
             };
 
-            // Scanner functions
+            // Scanner functions - supports both QR codes and barcodes
             const startScanner = (type, targetRef) => {
                 if (!targetRef.current) {
                     targetRef.current = new Html5Qrcode("reader");
                 }
-                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                // Support both QR codes and various barcode types
+                const config = { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 250 },
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.CODABAR
+                    ]
+                };
                 targetRef.current.start(
                     { facingMode: "environment" },
                     config,
@@ -2673,7 +2700,7 @@ function doGet(e) {
                 ),
 
                 // Department editor slide-over with link to lucide.dev and Save & Close button
-                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isDepartmentEditorOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                h('div', { className: `fixed inset-0 z-[70] overflow-hidden ${isDepartmentEditorOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
                     h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isDepartmentEditorOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsDepartmentEditorOpen(false) }),
                     h('div', { className: `absolute inset-y-0 left-0 max-w-full flex transition-transform duration-300 ${isDepartmentEditorOpen ? 'translate-x-0' : '-translate-x-full'}` },
                         h('div', { className: "w-screen max-w-sm bg-white shadow-2xl flex flex-col h-full" },
@@ -2732,7 +2759,7 @@ function doGet(e) {
                 ),
 
                 // Original Config Editor with Save & Close button
-                h('div', { className: `fixed inset-0 z-50 overflow-hidden ${isConfigOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
+                h('div', { className: `fixed inset-0 z-[70] overflow-hidden ${isConfigOpen ? 'pointer-events-auto' : 'pointer-events-none'}` },
                     h('div', { className: `absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${isConfigOpen ? 'opacity-100' : 'opacity-0'}`, onClick: () => setIsConfigOpen(false) }),
                     h('div', { className: `absolute inset-y-0 left-0 max-w-full flex transition-transform duration-300 ${isConfigOpen ? 'translate-x-0' : '-translate-x-full'}` },
                         h('div', { className: "w-screen max-w-sm bg-white shadow-2xl flex flex-col h-full" },
@@ -3003,8 +3030,28 @@ function doGet(e) {
                                         ),
 
                                         h('div', null,
-                                            h('label', { className: "text-xs font-bold text-slate-500 uppercase mb-1.5 block" }, "ราคา"),
-                                            h('input', { type: "number", className: "w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500", value: formData.price, onChange: e => setFormData({...formData, price: e.target.value}) })
+                                            h('div', { className: "flex items-center justify-between mb-1.5" },
+                                                h('label', { className: "text-xs font-bold text-slate-500 uppercase" }, "ราคา"),
+                                                h('label', { className: "flex items-center gap-2 text-xs font-medium text-slate-600" },
+                                                    h('input', { 
+                                                        type: "checkbox", 
+                                                        checked: !formData.price,
+                                                        onChange: e => {
+                                                            if (e.target.checked) {
+                                                                setFormData({...formData, price: ''});
+                                                            }
+                                                        }
+                                                    }),
+                                                    "ไม่ระบุ"
+                                                )
+                                            ),
+                                            h('input', { 
+                                                type: "number", 
+                                                disabled: !formData.price && formData.price !== '0',
+                                                className: `w-full p-3 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 ${!formData.price && formData.price !== '0' ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''}`, 
+                                                value: formData.price, 
+                                                onChange: e => setFormData({...formData, price: e.target.value}) 
+                                            })
                                         ),
 
                                         h('div', null,
